@@ -2,11 +2,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny # para dar persimo para que se logue el que quiera
-from .serializers import RegistroUsuarioSerializer , LoginSerializer
+from .serializers import RegistroUsuarioSerializer , LoginSerializer , TipoEstudianteSerializer
 from rest_framework_simplejwt.tokens import RefreshToken # genera los tokens JWT
 from django.contrib.auth.hashers import check_password #compara la contraseña que llega con el hash guardado en la BD
 from .models import Usuario
-
+from rest_framework.permissions import AllowAny, IsAuthenticated # es el qeu valida el toquen
 class RegistroView(APIView):
     permission_classes = [AllowAny]
 
@@ -57,4 +57,24 @@ class LoginView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# validacionde tipo de estudiente
 
+class TipoEstudianteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = TipoEstudianteSerializer(
+            request.user,
+            data=request.data,
+            partial=True
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"mensaje": "Tipo de estudiante guardado exitosamente"},
+                status=status.HTTP_200_OK
+            )
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )

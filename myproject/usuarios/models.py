@@ -49,6 +49,17 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         blank=True
     )
 
+    TIPO_ESTUDIANTE_CHOICES = [
+        ('C', 'Colegio'),
+        ('U', 'Universidad'),
+    ]
+
+    tipo_estudiante = models.CharField(
+        max_length=1,
+        choices=TIPO_ESTUDIANTE_CHOICES,
+        null=True,
+        blank=True
+    )
 
     # activar y desactivar usuario
     is_active = models.BooleanField(default=True)
