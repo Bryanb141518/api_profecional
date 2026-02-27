@@ -203,4 +203,7 @@ class RegistroUsuarioSerializer(serializers.ModelSerializer):
         validated_data['password'] = make_password(validated_data['password'])
         return super().create(validated_data)
 
-
+# validacion de los datos del login
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)# esto evita que la contrasena salga en respuesta que aparesca en el json

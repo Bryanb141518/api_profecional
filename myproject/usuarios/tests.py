@@ -1,8 +1,8 @@
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
-
-
+from django.contrib.auth.hashers import make_password
+from .models import Usuario
 class RegistroUsuarioTestCase(APITestCase):
 
     def setUp(self):
@@ -75,3 +75,48 @@ class RegistroUsuarioTestCase(APITestCase):
         self.datos_validos['apellido'] = 'Juan'
         response = self.client.post(self.url, self.datos_validos, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class LoginTestCase(APITestCase):
+
+    def setUp(self):
+        self.url = reverse('login')
+        # Crear usuario para las pruebas
+        self.usuario = Usuario.objects.create(
+            nombre="Juan",
+            apellido="Perez",
+            edad=20,
+            genero="M",
+            email="juan@gmail.com",
+            password=make_password("Abc123!@")
+        )
+        self.datos_validos = {
+            "email": "juan@gmail.com",
+            "password": "Abc123!@"
+        }
+
+    # ========== Login exitoso ==========
+
+    def test_login_exitoso(self):
+        response = self.client.post(self.url, self.datos_validos, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('access', response.data)
+        self.assertIn('refresh', response.data)
+
+    # ========== Credenciales incorrectas ==========
+
+    def test_email_no_existe(self):
+        self.datos_validos['email'] = 'noexiste@gmail.com'
+        response = self.client.post(self.url, self.datos_validos, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_password_incorrecta(self):
+        self.datos_validos['password'] = 'Incorrecta123!@'
+        response = self.client.post(self.url, self.datos_validos, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    # ========== Token no expone contraseña ==========
+
+    def test_password_no_en_respuesta(self):
+        response = self.client.post(self.url, self.datos_validos, format='json')
+        self.assertNotIn('password', response.data)
