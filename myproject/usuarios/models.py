@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import  PermissionsMixin ,AbstractBaseUser, BaseUserManager
 #evitar valores absurdos del usuario
 from django.core.validators import MinValueValidator, MaxValueValidator
-
+from django.core.exceptions import ValidationError
 
 # Primero el manager para manejar creación de usuarios
 class UsuarioManager(BaseUserManager):
@@ -58,7 +58,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         max_length=1,
         choices=TIPO_ESTUDIANTE_CHOICES,
         null=True,
-        blank=True
+        blank=False
     )
 
     # activar y desactivar usuario
@@ -78,4 +78,54 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+# creacion de perfil universitario
+class PerfilUniversitario(models.Model):
+    usuario = models.OneToOneField(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name='perfil_universitario'
+    )
+    universidad = models.CharField(max_length=100)
+    carrera = models.CharField(max_length=100)
+    total_semestres = models.PositiveIntegerField()
+    semestre_actual = models.PositiveIntegerField()
+    creditos_para_graduarse = models.PositiveIntegerField()
+    creditos_aprobados = models.PositiveIntegerField(default=0)
+
+    def clean(self):  # 👈 aquí
+        if self.semestre_actual > self.total_semestres:
+            raise ValidationError("El semestre actual no puede superar el total de semestres.")
+
+    class Meta:
+        verbose_name = "Perfil Universitario"
+        verbose_name_plural = "Perfiles Universitarios"
+
+    def __str__(self):
+        return f"{self.usuario.email} - {self.carrera}"
+
+# creeacion del perfil de secundaria
+class PerfilSecundaria(models.Model):
+    usuario = models.OneToOneField(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name='perfil_secundaria'
+    )
+    nombre_instituto = models.CharField(max_length=100)
+    curso_actual = models.CharField(max_length=100)
+    total_de_periodos = models.PositiveIntegerField()
+    periodo_actual = models.PositiveIntegerField()
+    total_de_materias = models.PositiveIntegerField()
+    total_de_materias_para_aprobacion = models.PositiveIntegerField()
+
+    def clean(self):
+        if self.periodo_actual > self.total_de_periodos:
+            raise ValidationError("El periodo actual no puede superar el total de periodos.")
+
+    class Meta:
+        verbose_name = "Perfil Secundaria"
+        verbose_name_plural = "Perfiles Secundaria"
+
+    def __str__(self):
+        return f"{self.usuario.email} - {self.curso_actual}"
 

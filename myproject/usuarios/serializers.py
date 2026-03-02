@@ -9,7 +9,7 @@ import re
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.hashers import make_password
-from .models import Usuario
+from .models import Usuario, PerfilUniversitario
 
 # Constantes de validación
 MIN_PASSWORD_LENGTH = 8
@@ -213,3 +213,19 @@ class TipoEstudianteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
         fields = ['tipo_estudiante']
+
+
+# validaciond el perfil universitario
+class PerfilUniversitarioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PerfilUniversitario
+        fields = ['universidad', 'carrera', 'total_semestres', 'semestre_actual', 'creditos_para_graduarse']
+
+    def validate(self, attrs):
+        user = self.context['request'].user
+        if user.tipo_estudiante != 'U':
+            raise serializers.ValidationError("Solo usuarios universitarios pueden crear este perfil.")
+        if hasattr(user, 'perfil_universitario'):
+            raise serializers.ValidationError("Este usuario ya tiene perfil universitario.")
+        return attrs
+

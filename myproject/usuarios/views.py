@@ -2,7 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny # para dar persimo para que se logue el que quiera
-from .serializers import RegistroUsuarioSerializer , LoginSerializer , TipoEstudianteSerializer
+from .serializers import (RegistroUsuarioSerializer, LoginSerializer, TipoEstudianteSerializer, PerfilUniversitario,\
+    PerfilUniversitarioSerializer , PerfilSecundariaSerializer)
 from rest_framework_simplejwt.tokens import RefreshToken # genera los tokens JWT
 from django.contrib.auth.hashers import check_password #compara la contraseña que llega con el hash guardado en la BD
 from .models import Usuario
@@ -78,3 +79,36 @@ class TipoEstudianteView(APIView):
             serializer.errors,
             status=status.HTTP_400_BAD_REQUEST
         )
+
+# datos universitarios
+class PerfilUniversitarioView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        serializer = PerfilUniversitarioSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"mensaje": "Perfil universitario creado exitosamente"},
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+#datos secundaria
+class PerfilSecundariaView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = PerfilSecundariaSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        if serializer.is_valid():
+            serializer.save(usuario=request.user)
+            return Response(
+                {"mensaje": "Perfil de secundaria creado exitosamente"},
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
