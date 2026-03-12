@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar Sesión</title>
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+
+  <div class="bg">
+    <span></span><span></span><span></span>
+    <span></span><span></span><span></span>
+  </div>
+
+  <main class="auth-wrapper">
+    <div class="auth-card">
+
+      <div class="auth-brand">
+        <div class="brand-icon">📚</div>
+        <h1>Bienvenido</h1>
+        <p>Inicia sesión para continuar</p>
+      </div>
+
+      <!-- Formulario login -->
+      <form id="form-login" novalidate>
+
+        <div class="form-group">
+          <label for="email">Correo electrónico</label>
+          <input type="email" id="email" name="email" placeholder="tu@correo.com" autocomplete="email">
+          <span class="error-msg" id="error-email"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <div class="input-eye">
+            <input type="password" id="password" name="password" placeholder="Tu contraseña" autocomplete="current-password">
+            <button type="button" class="eye-btn" onclick="togglePass('password', this)">👁</button>
+          </div>
+          <span class="error-msg" id="error-password"></span>
+        </div>
+
+        <div class="form-group check-row">
+          <label class="check-label">
+            <input type="checkbox" id="recordar">
+            <span class="checkmark"></span>
+            Recordar sesión
+          </label>
+        </div>
+
+        <!-- Alerta de error general -->
+        <div class="alert-error" id="alert-error" style="display:none"></div>
+
+        <button type="submit" class="btn-primary" id="btn-login">
+          <span class="btn-text">Iniciar sesión</span>
+          <span class="btn-spinner" style="display:none">Verificando...</span>
+        </button>
+
+      </form>
+
+      <p class="auth-switch">¿No tienes cuenta? <a href="registro.html">Regístrate aquí</a></p>
+
+    </div>
+  </main>
+
+  <script src="/front/storage.js" defer></script>
+  <script src="/front/login.js" defer></script>
+</body>
+</html>

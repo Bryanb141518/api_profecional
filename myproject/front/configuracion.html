@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configurar Perfil Universitario</title>
+  <link rel="stylesheet" href="configuracion.css">
+</head>
+<body>
+
+  <div class="bg">
+    <span></span><span></span><span></span>
+    <span></span><span></span><span></span>
+  </div>
+
+  <main class="config-wrapper">
+
+    <!-- Header -->
+    <div class="config-header">
+      <button class="btn-back" onclick="volverSeleccion()">← Volver</button>
+      <div class="config-brand">
+        <div class="brand-icon">🏛️</div>
+        <h1>Configuración Universitaria</h1>
+        <p>Completa tu información académica para crear tu perfil</p>
+      </div>
+    </div>
+
+    <!-- Pasos -->
+    <div class="steps-bar">
+      <div class="step active" id="step-1">
+        <div class="step-circle">1</div>
+        <span>Institución</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" id="step-2">
+        <div class="step-circle">2</div>
+        <span>Créditos</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" id="step-3">
+        <div class="step-circle">3</div>
+        <span>Progreso</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" id="step-4">
+        <div class="step-circle">4</div>
+        <span>Calificaciones</span>
+      </div>
+    </div>
+
+    <!-- Formulario -->
+    <div class="config-card">
+      <form id="form-config" novalidate>
+
+        <!-- Paso 1: Institución -->
+        <div class="form-step active" id="form-step-1">
+          <h2>Información de tu institución</h2>
+
+          <div class="form-group">
+            <label for="universidad">Universidad / Institución</label>
+            <input type="text" id="universidad" name="universidad"
+              placeholder="Ej: Universidad Nacional de Colombia">
+            <span class="error-msg" id="error-universidad"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="carrera">Carrera / Programa académico</label>
+            <input type="text" id="carrera" name="carrera"
+              placeholder="Ej: Ingeniería de Sistemas">
+            <span class="error-msg" id="error-carrera"></span>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="facultad">Facultad <span class="opcional">(opcional)</span></label>
+              <input type="text" id="facultad" name="facultad"
+                placeholder="Ej: Facultad de Ingeniería">
+            </div>
+            <div class="form-group">
+              <label for="modalidad">Modalidad</label>
+              <select id="modalidad" name="modalidad">
+                <option value="presencial">Presencial</option>
+                <option value="virtual">Virtual</option>
+                <option value="mixta">Mixta</option>
+                <option value="distancia">A distancia</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="step-actions">
+            <button type="button" class="btn-next" onclick="siguiente()">
+              Siguiente →
+            </button>
+          </div>
+        </div>
+
+        <!-- Paso 2: Créditos -->
+        <div class="form-step" id="form-step-2">
+          <h2>Sistema de créditos</h2>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="total-creditos">Total créditos para graduarse</label>
+              <input type="number" id="total-creditos" name="total_creditos"
+                placeholder="160" min="120" max="300">
+              <span class="hint">Entre 120 y 300</span>
+              <span class="error-msg" id="error-total-creditos"></span>
+            </div>
+            <div class="form-group">
+              <label for="creditos-aprobados">Créditos ya aprobados</label>
+              <input type="number" id="creditos-aprobados" name="creditos_aprobados"
+                placeholder="0" min="0" value="0">
+              <span class="hint">Si estás comenzando coloca 0</span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="min-creditos">Mínimo créditos por semestre</label>
+              <input type="number" id="min-creditos" name="min_creditos"
+                placeholder="12" min="6" max="25" oninput="config.calcularSemestres()">
+              <span class="error-msg" id="error-min-creditos"></span>
+            </div>
+            <div class="form-group">
+              <label for="max-creditos">Máximo créditos por semestre</label>
+              <input type="number" id="max-creditos" name="max_creditos"
+                placeholder="20" min="12" max="30">
+              <span class="error-msg" id="error-max-creditos"></span>
+            </div>
+          </div>
+
+          <div class="info-box" id="box-semestres" style="display:none">
+            📊 Con esos datos tendrías aproximadamente
+            <strong id="semestres-estimados">0</strong> semestres para graduarte.
+          </div>
+
+          <div class="step-actions">
+            <button type="button" class="btn-back-step" onclick="anterior()">← Anterior</button>
+            <button type="button" class="btn-next" onclick="siguiente()">Siguiente →</button>
+          </div>
+        </div>
+
+        <!-- Paso 3: Progreso -->
+        <div class="form-step" id="form-step-3">
+          <h2>Tu progreso actual</h2>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="semestre-actual">¿En qué semestre vas?</label>
+              <input type="number" id="semestre-actual" name="semestre_actual"
+                placeholder="1" min="1" max="15">
+              <span class="hint">Los semestres anteriores se marcarán en verde</span>
+              <span class="error-msg" id="error-semestre-actual"></span>
+            </div>
+            <div class="form-group">
+              <label for="año-ingreso">Año de ingreso</label>
+              <input type="number" id="año-ingreso" name="año_ingreso"
+                placeholder="2024" min="2010" max="2026">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="promedio-actual">Promedio acumulado <span class="opcional">(opcional)</span></label>
+            <input type="number" id="promedio-actual" name="promedio_actual"
+              placeholder="4.0" step="0.01" min="0" max="5">
+            <span class="hint">Si ya lo conoces, si no déjalo vacío</span>
+          </div>
+
+          <div class="step-actions">
+            <button type="button" class="btn-back-step" onclick="anterior()">← Anterior</button>
+            <button type="button" class="btn-next" onclick="siguiente()">Siguiente →</button>
+          </div>
+        </div>
+
+        <!-- Paso 4: Calificaciones -->
+        <div class="form-step" id="form-step-4">
+          <h2>Sistema de calificaciones</h2>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="escala">Escala de notas</label>
+              <select id="escala" name="escala" onchange="config.actualizarNotaMinima()">
+                <option value="5.0">Escala 0.0 — 5.0</option>
+                <option value="10.0">Escala 0.0 — 10.0</option>
+                <option value="100">Escala 0 — 100</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="nota-minima">Nota mínima para aprobar</label>
+              <input type="number" id="nota-minima" name="nota_minima"
+                placeholder="3.0" step="0.1" min="0">
+              <span class="hint" id="nota-sugerida">Sugerida: 3.0</span>
+              <span class="error-msg" id="error-nota-minima"></span>
+            </div>
+          </div>
+
+          <div class="step-actions">
+            <button type="button" class="btn-back-step" onclick="anterior()">← Anterior</button>
+            <button type="button" class="btn-crear" id="btn-crear" onclick="crear()">
+              <span class="btn-text">✨ Crear perfil</span>
+              <span class="btn-spinner" style="display:none">Creando...</span>
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+  </main>
+
+  <script src="/front/storage.js"></script>
+  <script src="/front/configuracion.js"></script>
+</body>
+</html>

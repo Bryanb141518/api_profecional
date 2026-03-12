@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>¿Qué tipo de estudiante eres?</title>
+  <link rel="stylesheet" href="seleccion.css">
+</head>
+<body>
+
+  <div class="bg">
+    <span></span><span></span><span></span>
+    <span></span><span></span><span></span>
+  </div>
+
+  <main class="seleccion-wrapper">
+
+    <!-- Header usuario -->
+    <div class="user-bar">
+      <div class="user-info">
+        <span class="user-avatar" id="user-avatar">U</span>
+        <span class="user-nombre" id="user-nombre">Usuario</span>
+      </div>
+      <button class="btn-logout" onclick="cerrarSesion()">Cerrar sesión</button>
+    </div>
+
+    <!-- Pregunta -->
+    <div class="seleccion-header">
+      <h1>¿Qué tipo de estudiante eres?</h1>
+      <p>Elige la opción que describe tu situación académica actual</p>
+    </div>
+
+    <!-- Tarjetas -->
+    <div class="cards-grid">
+
+      <div class="tipo-card" id="card-colegio" onclick="seleccionar('colegio')">
+        <div class="card-icon">🎓</div>
+        <h2>Estudiante de Colegio</h2>
+        <p>Cursando educación secundaria o bachillerato</p>
+        <ul class="card-features">
+          <li>Grados 6° a 11°</li>
+          <li>Períodos académicos</li>
+          <li>Control de notas y tareas</li>
+          <li>Alertas de rendimiento</li>
+        </ul>
+        <div class="card-badge proximamente">Próximamente</div>
+      </div>
+
+      <div class="tipo-card activo" id="card-universidad" onclick="seleccionar('universidad')">
+        <div class="card-icon">🏛️</div>
+        <h2>Estudiante Universitario</h2>
+        <p>Cursando educación superior o universitaria</p>
+        <ul class="card-features">
+          <li>Sistema de créditos y semestres</li>
+          <li>Progreso hacia graduación</li>
+          <li>Control de materias y notas</li>
+          <li>Historial académico completo</li>
+        </ul>
+        <div class="card-badge disponible">Disponible</div>
+      </div>
+
+    </div>
+
+    <p class="seleccion-nota">💡 Podrás cambiar esta configuración más adelante si es necesario.</p>
+
+  </main>
+
+  <script src="/front/storage.js" defer></script>
+  <script src="/front/seleccion.js" defer></script>
+</body>
+</html>

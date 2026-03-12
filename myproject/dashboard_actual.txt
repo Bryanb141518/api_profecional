@@ -1,0 +1,1640 @@
+﻿// ============================================
+// dashboard.js â€” v4 completo
+// ============================================
+
+class Dashboard {
+    constructor() {
+        this.perfil          = null;
+        this.materiaActualId = null;
+        this.semestreModalId = null;
+        this._semActividadId = null;
+        this._modoEdicion    = false;
+        this._materiaEditId  = null;
+        this.grafica         = null;
+        this.init();
+    }
+
+    init() {
+        if (!storage.hasValidSession()) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        this.perfil = storage.get('perfil_universitario');
+        if (!this.perfil) {
+            window.location.href = 'seleccion.html';
+            return;
+        }
+
+        if (!this.perfil.semestres) this.perfil.semestres = [];
+        if (!this.perfil.historial) this.perfil.historial = [];
+        if (!this.perfil.horario)   this.perfil.horario   = [];
+
+        this.aplicarTemaGuardado();
+        this.actualizarTituloPagina();
+        this.iniciarParticulas();
+        this.renderizarPerfil();
+        this.renderizarResumen();
+        this.renderizarBloques();
+        this.renderizarMaterias();
+        this.verificarAlertas();
+        this.configurarEventos();
+        this.programarAlertas();
+    }
+
+    // â”€â”€ Persistencia â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    guardar() {
+        storage.set('perfil_universitario', this.perfil);
+    }
+
+    // â”€â”€ Tema claro / oscuro â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    aplicarTemaGuardado() {
+        const temaClaro = storage.get('tema_claro');
+        if (temaClaro) {
+            document.body.classList.add('tema-claro');
+            document.getElementById('theme-checkbox').checked = true;
+            document.getElementById('theme-label').textContent = 'Claro';
+        }
+    }
+
+    toggleTema(esClaro) {
+        if (esClaro) {
+            document.body.classList.add('tema-claro');
+            document.getElementById('theme-label').textContent = 'Claro';
+            storage.set('tema_claro', true);
+        } else {
+            document.body.classList.remove('tema-claro');
+            document.getElementById('theme-label').textContent = 'Oscuro';
+            storage.remove('tema_claro');
+        }
+    }
+
+    // â”€â”€ TÃ­tulo dinÃ¡mico â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    actualizarTituloPagina() {
+        document.title = `Semestre ${this.perfil.semestreActual} â€” ${this.perfil.carrera}`;
+    }
+
+    // â”€â”€ PartÃ­culas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    iniciarParticulas() {
+        const canvas = document.getElementById('particles-canvas');
+        const ctx    = canvas.getContext('2d');
+
+        const resize = () => {
+            canvas.width  = window.innerWidth;
+            canvas.height = window.innerHeight;
+        };
+        resize();
+        window.addEventListener('resize', resize);
+
+        class Particula {
+            constructor() { this.reset(); }
+            reset() {
+                this.x     = Math.random() * canvas.width;
+                this.y     = Math.random() * canvas.height;
+                this.vx    = (Math.random() - 0.5) * 0.4;
+                this.vy    = (Math.random() - 0.5) * 0.4;
+                this.alpha = Math.random() * 0.35 + 0.08;
+                this.r     = Math.random() * 1.5 + 0.5;
+                this.color = Math.random() > 0.5 ? '37,99,235' : '6,182,212';
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 0 || this.x > canvas.width ||
+                    this.y < 0 || this.y > canvas.height) this.reset();
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${this.color},${this.alpha})`;
+                ctx.fill();
+            }
+        }
+
+        const particulas = Array.from({ length: 80 }, () => new Particula());
+
+        const loop = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < particulas.length; i++) {
+                for (let j = i + 1; j < particulas.length; j++) {
+                    const dx   = particulas[i].x - particulas[j].x;
+                    const dy   = particulas[i].y - particulas[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 100) {
+                        ctx.beginPath();
+                        ctx.moveTo(particulas[i].x, particulas[i].y);
+                        ctx.lineTo(particulas[j].x, particulas[j].y);
+                        ctx.strokeStyle = `rgba(37,99,235,${0.08 * (1 - dist / 100)})`;
+                        ctx.lineWidth   = 0.5;
+                        ctx.stroke();
+                    }
+                }
+            }
+            particulas.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(loop);
+        };
+        loop();
+    }
+
+    // â”€â”€ Perfil header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    renderizarPerfil() {
+        const p      = this.perfil;
+        const titulo = this.calcularTitulo(p.carrera);
+        const nombre = titulo ? `${titulo} ${p.nombreUsuario}` : p.nombreUsuario;
+
+        document.getElementById('header-universidad').textContent  = p.universidad;
+        document.getElementById('header-carrera').textContent      = p.carrera;
+        document.getElementById('header-nombre').textContent       = p.nombreUsuario;
+        document.getElementById('header-avatar').textContent       = p.nombreUsuario.charAt(0).toUpperCase();
+        document.getElementById('perfil-nombre').textContent       = nombre;
+        document.getElementById('perfil-universidad').textContent  = p.universidad;
+        document.getElementById('perfil-carrera').textContent      = p.carrera;
+        document.getElementById('num-semestre-actual').textContent = p.semestreActual;
+        document.getElementById('min-sem').textContent             = p.minCreditosSemestre;
+        document.getElementById('max-sem').textContent             = p.maxCreditosSemestre;
+
+        this.actualizarBarraCreditos();
+    }
+
+    calcularTitulo(carrera) {
+        const c = (carrera || '').toLowerCase();
+        if (c.includes('ingenierÃ­a') || c.includes('ingenieria')) return 'Ing.';
+        if (c.includes('medicina')   || c.includes('mÃ©dico'))     return 'Dr.';
+        if (c.includes('derecho')    || c.includes('abogacÃ­a'))   return 'Abg.';
+        if (c.includes('arquitectura'))                            return 'Arq.';
+        if (c.includes('psicologÃ­a') || c.includes('psicologia')) return 'Psic.';
+        if (c.includes('administraciÃ³n') || c.includes('administracion')) return 'Adm.';
+        if (c.includes('contadurÃ­a') || c.includes('contaduria')) return 'Cont.';
+        return '';
+    }
+
+    actualizarBarraCreditos() {
+        const p   = this.perfil;
+        const pct = Math.min((p.creditosAprobados / p.totalCreditos) * 100, 100);
+        document.getElementById('barra-creditos').style.width = pct + '%';
+        document.getElementById('creditos-texto').textContent =
+            `${p.creditosAprobados} / ${p.totalCreditos} crÃ©ditos`;
+    }
+
+    // â”€â”€ Resumen rÃ¡pido â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    renderizarResumen() {
+        const semestre   = this.getSemestreActual();
+        const materias   = semestre.materias || [];
+        const enRiesgo   = materias.filter(m => {
+            const p = this.calcularPromedioMateria(m);
+            return this.calcularEstadoMateria(m, p) === 'riesgo';
+        }).length;
+
+        const hoy        = new Date().toISOString().split('T')[0];
+        const manana     = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+        let pendientesHoy = 0;
+
+        materias.forEach(m => {
+            m.actividades.forEach(a => {
+                if (!a.nota && (a.fechaLimite === hoy || a.fechaLimite === manana))
+                    pendientesHoy++;
+            });
+        });
+
+        const pct = ((this.perfil.creditosAprobados / this.perfil.totalCreditos) * 100).toFixed(1);
+
+        const tarjetas = [
+            { valor: materias.length, label: 'Materias',         color: 'azul',     icon: 'ðŸ“š' },
+            { valor: enRiesgo,        label: 'En riesgo',        color: 'rojo',     icon: 'âš ï¸' },
+            { valor: pendientesHoy,   label: 'Vencen pronto',    color: 'amarillo', icon: 'ðŸ“…' },
+            { valor: `${pct}%`,       label: 'Progreso carrera', color: 'verde',    icon: 'ðŸŽ¯' },
+        ];
+
+        document.getElementById('resumen-grid').innerHTML = tarjetas.map((t, i) => `
+            <div class="resumen-card ${t.color}" style="animation-delay:${i * 0.07}s">
+                <div class="resumen-valor">${t.valor}</div>
+                <div class="resumen-label">${t.label}</div>
+                <div class="resumen-icon">${t.icon}</div>
+            </div>
+        `).join('');
+    }
+
+    // â”€â”€ Bloques â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    renderizarBloques() {
+        const grid = document.getElementById('bloques-grid');
+        grid.innerHTML = '';
+        const p = this.perfil;
+
+        for (let i = 1; i <= p.totalSemestres; i++) {
+            const bloque = document.createElement('div');
+            bloque.className = 'bloque';
+            bloque.style.animationDelay = `${(i - 1) * 0.04}s`;
+
+            if (i < p.semestreActual) {
+                bloque.classList.add('completado');
+                bloque.textContent = 'âœ“';
+                bloque.title       = `Semestre ${i} â€” Click para ver materias`;
+                bloque.onclick     = () => this.abrirModalSemestreAnt(i);
+            } else if (i === p.semestreActual) {
+                bloque.classList.add('actual');
+                bloque.textContent = i;
+                bloque.title       = `Semestre ${i} â€” En curso`;
+            } else {
+                bloque.classList.add('futuro');
+                bloque.textContent = i;
+                bloque.title       = `Semestre ${i} â€” Pendiente`;
+                bloque.onclick     = () => toast(`El semestre ${i} aÃºn no ha comenzado`, 'info');
+            }
+
+            grid.appendChild(bloque);
+        }
+    }
+
+    // â”€â”€ Semestre helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    getSemestre(numero) {
+        let s = this.perfil.semestres.find(s => s.numero === numero);
+        if (!s) {
+            s = { numero, materias: [], estado: 'en_curso' };
+            this.perfil.semestres.push(s);
+            this.guardar();
+        }
+        return s;
+    }
+
+    getSemestreActual() {
+        return this.getSemestre(this.perfil.semestreActual);
+    }
+
+    // â”€â”€ Cerrar semestre â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    confirmarCerrarSemestre() {
+        const semestre = this.getSemestreActual();
+        const materias = semestre.materias;
+
+        if (materias.length === 0) {
+            toast('Agrega al menos una materia antes de cerrar el semestre', 'error');
+            return;
+        }
+        if (this.perfil.semestreActual >= this.perfil.totalSemestres) {
+            toast('Â¡Ya estÃ¡s en el Ãºltimo semestre!', 'info');
+            return;
+        }
+
+        const aprobadas  = materias.filter(m => this.calcularEstadoMateria(m, this.calcularPromedioMateria(m)) === 'aprobada');
+        const perdidas   = materias.filter(m => this.calcularEstadoMateria(m, this.calcularPromedioMateria(m)) === 'perdida');
+        const enCurso    = materias.filter(m => {
+            const e = this.calcularEstadoMateria(m, this.calcularPromedioMateria(m));
+            return e === 'curso' || e === 'riesgo';
+        });
+        const creditosSem = aprobadas.reduce((s, m) => s + m.creditos, 0);
+
+        document.getElementById('resumen-cierre').innerHTML = `
+            <div class="resumen-cierre-grid">
+                <div class="cierre-item"><span class="cierre-label">Semestre actual</span><span class="cierre-valor">${this.perfil.semestreActual}</span></div>
+                <div class="cierre-item"><span class="cierre-label">Aprobadas</span><span class="cierre-valor" style="color:var(--success)">âœ… ${aprobadas.length}</span></div>
+                <div class="cierre-item"><span class="cierre-label">Perdidas</span><span class="cierre-valor" style="color:var(--danger)">âŒ ${perdidas.length}</span></div>
+                ${enCurso.length > 0 ? `<div class="cierre-item"><span class="cierre-label">Sin nota final</span><span class="cierre-valor" style="color:var(--warning)">âš ï¸ ${enCurso.length}</span></div>` : ''}
+                <div class="cierre-item"><span class="cierre-label">CrÃ©ditos ganados</span><span class="cierre-valor">${creditosSem} cr</span></div>
+                <div class="cierre-item"><span class="cierre-label">PrÃ³ximo semestre</span><span class="cierre-valor" style="color:var(--cyan)">${this.perfil.semestreActual + 1}</span></div>
+            </div>`;
+
+        document.getElementById('modal-cerrar-sem').classList.add('open');
+    }
+
+    cerrarSemestre() {
+        const semestre  = this.getSemestreActual();
+        semestre.estado = 'completado';
+        semestre.materias.forEach(m => this.actualizarHistorial(m, semestre.numero));
+
+        this.perfil.semestreActual++;
+        this.guardar();
+        cerrarModal('modal-cerrar-sem');
+        this.actualizarTituloPagina();
+        this.renderizarPerfil();
+        this.renderizarResumen();
+        this.renderizarBloques();
+        this.renderizarMaterias();
+        this.verificarAlertas();
+        toast(`Â¡Semestre ${this.perfil.semestreActual - 1} cerrado! Ahora vas en el semestre ${this.perfil.semestreActual} ðŸŽ“`, 'exito', 4000);
+    }
+
+    // â”€â”€ Modal semestre anterior â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    abrirModalSemestreAnt(numeroSemestre) {
+        this.semestreModalId = numeroSemestre;
+        let semestre = this.perfil.semestres.find(s => s.numero === numeroSemestre);
+        if (!semestre) {
+            semestre = { numero: numeroSemestre, materias: [], estado: 'anterior' };
+            this.perfil.semestres.push(semestre);
+            this.guardar();
+        }
+        document.getElementById('modal-sem-titulo').textContent = `Semestre ${numeroSemestre}`;
+        this.renderizarModalSemestreAnt(semestre);
+        document.getElementById('modal-semestre-ant').classList.add('open');
+    }
+
+    renderizarModalSemestreAnt(semestre) {
+        const body          = document.getElementById('modal-sem-body');
+        const creditosUsados = semestre.materias.reduce((s, m) => s + m.creditos, 0);
+
+        body.innerHTML = `
+            <div class="sem-ant-header">
+                <span style="color:var(--gray-500);font-size:0.83rem">
+                    ${semestre.materias.length} materias Â· ${creditosUsados} crÃ©ditos
+                </span>
+                <button class="btn-agregar-sem-ant"
+                    onclick="dashboard.abrirModalMateria(${semestre.numero})">
+                    + Agregar materia
+                </button>
+            </div>
+            <div id="materias-sem-ant">
+                ${semestre.materias.length === 0
+                    ? `<div class="empty-state"><span class="empty-icon">ðŸ“‚</span><p>Sin materias registradas.</p></div>`
+                    : semestre.materias.map(m => this.htmlTarjetaMateriaAnt(m, semestre.numero)).join('')
+                }
+            </div>`;
+    }
+
+    htmlTarjetaMateriaAnt(materia, numeroSemestre) {
+        const promedio = this.calcularPromedioMateria(materia);
+        const estado   = this.calcularEstadoMateria(materia, promedio);
+        const pctUsado = materia.actividades.reduce((s, a) => s + a.porcentaje, 0);
+
+        return `
+            <div class="materia-card ${estado}" style="margin-bottom:12px">
+                <div class="materia-top">
+                    <div class="materia-color" style="background:${materia.color}"></div>
+                    <div class="materia-info">
+                        <div class="materia-nombre">${sanitizeHTML(materia.nombre)}</div>
+                        <div class="materia-meta">${materia.creditos} cr Â· Escala ${materia.escala} Â· MÃ­n. ${materia.notaMinima}</div>
+                    </div>
+                    <div class="materia-acciones-top">
+                        <button class="btn-icon editar" title="Editar"
+                            onclick="dashboard.abrirModalEditarMateria('${materia.id}', ${numeroSemestre})">âœï¸</button>
+                        <button class="btn-icon eliminar" title="Eliminar"
+                            onclick="dashboard.eliminarMateria('${materia.id}', ${numeroSemestre})">ðŸ—‘ï¸</button>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;margin-left:10px">
+                        <div class="materia-promedio ${estado}">${promedio !== null ? promedio.toFixed(2) : 'â€”'}</div>
+                        <span class="materia-estado-badge badge-${estado}">${this.etiquetaEstado(estado)}</span>
+                    </div>
+                </div>
+                <div class="materia-barra-wrap">
+                    <div class="materia-barra">
+                        <div class="materia-barra-fill" style="width:${pctUsado}%"></div>
+                    </div>
+                    <span class="materia-barra-label">${pctUsado}% ingresado</span>
+                </div>
+                <div class="actividades-wrap">
+                    <div class="actividades-titulo">Actividades (${materia.actividades.length}/${materia.totalNotas})</div>
+                    <div class="actividades-lista">${this.renderizarActividades(materia, numeroSemestre)}</div>
+                    ${materia.actividades.length < materia.totalNotas
+                        ? `<button class="btn-agregar-actividad"
+                                onclick="dashboard.abrirModalActividadEn('${materia.id}', ${numeroSemestre})">
+                                + Agregar actividad
+                           </button>` : ''}
+                </div>
+            </div>`;
+    }
+
+    cerrarModalSemestreAnt() {
+        document.getElementById('modal-semestre-ant').classList.remove('open');
+        this.semestreModalId = null;
+    }
+
+    // â”€â”€ Materias semestre actual â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    renderizarMaterias() {
+        const grid     = document.getElementById('materias-grid');
+        const semestre = this.getSemestreActual();
+
+        if (!semestre.materias || semestre.materias.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-state">
+                    <span class="empty-icon">ðŸŽ’</span>
+                    <p>AÃºn no hay materias. Â¡Agrega tu primera materia!</p>
+                </div>`;
+            return;
+        }
+
+        grid.innerHTML = '';
+        semestre.materias.forEach((materia, idx) => {
+            const card = this.crearTarjetaMateria(materia);
+            card.style.animationDelay = `${idx * 0.07}s`;
+            grid.appendChild(card);
+        });
+    }
+
+    crearTarjetaMateria(materia) {
+        const promedio       = this.calcularPromedioMateria(materia);
+        const estado         = this.calcularEstadoMateria(materia, promedio);
+        const notasFaltantes = materia.totalNotas - materia.actividades.length;
+        const pctUsado       = materia.actividades.reduce((s, a) => s + a.porcentaje, 0);
+        const numSem         = this.perfil.semestreActual;
+
+        const card = document.createElement('div');
+        card.className  = `materia-card ${estado}`;
+        card.dataset.id = materia.id;
+
+        card.innerHTML = `
+            <div class="materia-top">
+                <div class="materia-color" style="background:${materia.color}"></div>
+                <div class="materia-info">
+                    <div class="materia-nombre">${sanitizeHTML(materia.nombre)}</div>
+                    <div class="materia-meta">${materia.creditos} cr Â· Escala ${materia.escala} Â· MÃ­n. ${materia.notaMinima}</div>
+                </div>
+                <div class="materia-acciones-top">
+                    <button class="btn-icon editar" title="Editar materia"
+                        onclick="dashboard.abrirModalEditarMateria('${materia.id}', ${numSem})">âœï¸</button>
+                    <button class="btn-icon eliminar" title="Eliminar materia"
+                        onclick="dashboard.eliminarMateria('${materia.id}', ${numSem})">ðŸ—‘ï¸</button>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;margin-left:10px">
+                    <div class="materia-promedio ${estado}">
+                        ${promedio !== null ? promedio.toFixed(2) : 'â€”'}
+                    </div>
+                    <span class="materia-estado-badge badge-${estado}">${this.etiquetaEstado(estado)}</span>
+                </div>
+            </div>
+            <div class="materia-barra-wrap">
+                <div class="materia-barra">
+                    <div class="materia-barra-fill" style="width:${pctUsado}%"></div>
+                </div>
+                <span class="materia-barra-label">${pctUsado}% ingresado</span>
+            </div>
+            <div class="actividades-wrap">
+                <div class="actividades-titulo">
+                    Actividades (${materia.actividades.length}/${materia.totalNotas})
+                    ${notasFaltantes > 0
+                        ? `Â· <span style="color:var(--warning)">${notasFaltantes} pendientes</span>` : ''}
+                </div>
+                <div class="actividades-lista">
+                    ${this.renderizarActividades(materia, numSem)}
+                </div>
+                ${materia.actividades.length < materia.totalNotas
+                    ? `<button class="btn-agregar-actividad"
+                            onclick="dashboard.abrirModalActividad('${materia.id}')">
+                            + Agregar actividad
+                       </button>` : ''}
+            </div>`;
+        return card;
+    }
+
+    renderizarActividades(materia, numeroSemestre) {
+        if (materia.actividades.length === 0) {
+            return `<div style="color:var(--gray-500);font-size:0.8rem;padding:6px 0">Sin actividades aÃºn.</div>`;
+        }
+
+        const hoy    = new Date().toISOString().split('T')[0];
+        const manana = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+        return materia.actividades.map(act => {
+            const tieneNota = act.nota !== null && act.nota !== undefined && act.nota !== '';
+            const notaNum   = parseFloat(act.nota);
+            const aprobada  = tieneNota && notaNum >= materia.notaMinima;
+
+            let claseItem = tieneNota ? 'con-nota' : 'sin-nota';
+            if (act.fechaLimite === hoy)    claseItem = 'vence-hoy';
+            else if (act.fechaLimite === manana) claseItem = 'vence-pronto';
+
+            const claseBadge = tieneNota ? (aprobada ? 'aprobada' : 'perdida') : '';
+            const textoFecha = act.fechaLimite ? `Â· ðŸ“… ${act.fechaLimite}` : '';
+            const prioridad  = act.prioridad === 'alta' ? 'ðŸ”´' : act.prioridad === 'media' ? 'ðŸŸ¡' : 'ðŸŸ¢';
+
+            return `
+                <div class="actividad-item ${claseItem}">
+                    <div class="actividad-info">
+                        <div class="actividad-titulo">${prioridad} ${sanitizeHTML(act.titulo)}</div>
+                        <div class="actividad-detalles">${act.tipo} Â· ${act.porcentaje}% ${textoFecha}</div>
+                    </div>
+                    <div class="actividad-acciones">
+                        <div class="actividad-nota-badge ${claseBadge}"
+                            onclick="dashboard.editarNota('${materia.id}','${act.id}')"
+                            title="Click para editar nota">
+                            ${tieneNota ? notaNum.toFixed(2) : 'Sin nota'}
+                        </div>
+                        <button class="btn-eliminar-act" title="Eliminar"
+                            onclick="dashboard.eliminarActividad('${materia.id}','${act.id}',${numeroSemestre})">âœ•</button>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    // â”€â”€ CÃ¡lculos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    calcularPromedioMateria(materia) {
+        const conNota = materia.actividades.filter(
+            a => a.nota !== null && a.nota !== '' && a.nota !== undefined
+        );
+        if (conNota.length === 0) return null;
+        const totalPct = conNota.reduce((s, a) => s + a.porcentaje, 0);
+        if (totalPct === 0) return null;
+        return conNota.reduce((s, a) => s + parseFloat(a.nota) * a.porcentaje, 0) / totalPct;
+    }
+
+    calcularEstadoMateria(materia, promedio) {
+        const todas = materia.actividades.length === materia.totalNotas;
+        if (todas && promedio !== null) {
+            return promedio >= materia.notaMinima ? 'aprobada' : 'perdida';
+        }
+        if (promedio !== null) {
+            const pctUsado      = materia.actividades
+                .filter(a => a.nota !== null && a.nota !== '')
+                .reduce((s, a) => s + a.porcentaje, 0);
+            const pctRestante   = 100 - pctUsado;
+            const maxAlcanzable = promedio + (parseFloat(materia.escala) * pctRestante / 100);
+            if (maxAlcanzable < materia.notaMinima) return 'riesgo';
+        }
+        return 'curso';
+    }
+
+    etiquetaEstado(estado) {
+        return { aprobada: 'âœ… Aprobada', perdida: 'âŒ Perdida',
+                 riesgo: 'âš ï¸ En riesgo', curso: 'ðŸ“– En curso' }[estado] || 'En curso';
+    }
+
+    // â”€â”€ Modal materia agregar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    abrirModalMateria(numeroSemestre) {
+        const numSem         = numeroSemestre !== null ? numeroSemestre : this.perfil.semestreActual;
+        this.semestreModalId = numSem;
+        this._modoEdicion    = false;
+        this._materiaEditId  = null;
+
+        document.getElementById('modal-materia-titulo').textContent = 'Agregar Materia';
+        document.getElementById('btn-guardar-materia').textContent  = 'Agregar materia';
+        document.getElementById('grupo-total-notas').style.display  = 'block';
+        document.getElementById('form-materia').reset();
+        this.limpiarErroresMateria();
+
+        if (numSem === this.perfil.semestreActual) {
+            const semestre         = this.getSemestre(numSem);
+            const creditosActuales = semestre.materias.reduce((s, m) => s + m.creditos, 0);
+            if (creditosActuales >= this.perfil.maxCreditosSemestre) {
+                toast(`MÃ¡ximo de ${this.perfil.maxCreditosSemestre} crÃ©ditos alcanzado`, 'error');
+                return;
+            }
+        }
+
+        document.getElementById('modal-materia').classList.add('open');
+        document.getElementById('form-materia').onsubmit = (e) => {
+            e.preventDefault();
+            this.guardarMateria(numSem);
+        };
+    }
+
+    abrirModalEditarMateria(materiaId, numeroSemestre) {
+        const semestre = this.getSemestre(numeroSemestre);
+        const materia  = semestre.materias.find(m => m.id === materiaId);
+        if (!materia) return;
+
+        this._modoEdicion    = true;
+        this._materiaEditId  = materiaId;
+        this.semestreModalId = numeroSemestre;
+
+        document.getElementById('modal-materia-titulo').textContent = 'Editar Materia';
+        document.getElementById('btn-guardar-materia').textContent  = 'Guardar cambios';
+        document.getElementById('grupo-total-notas').style.display  = 'none';
+        this.limpiarErroresMateria();
+
+        document.getElementById('m-nombre').value      = materia.nombre;
+        document.getElementById('m-creditos').value    = materia.creditos;
+        document.getElementById('m-color').value       = materia.color;
+        document.getElementById('m-escala').value      = materia.escala;
+        document.getElementById('m-nota-minima').value = materia.notaMinima;
+
+        document.getElementById('modal-materia').classList.add('open');
+        document.getElementById('form-materia').onsubmit = (e) => {
+            e.preventDefault();
+            this.guardarEdicionMateria(materiaId, numeroSemestre);
+        };
+    }
+
+    guardarEdicionMateria(materiaId, numeroSemestre) {
+        const nombre     = document.getElementById('m-nombre').value.trim();
+        const creditos   = parseInt(document.getElementById('m-creditos').value);
+        const color      = document.getElementById('m-color').value;
+        const escala     = document.getElementById('m-escala').value;
+        const notaMinima = parseFloat(document.getElementById('m-nota-minima').value);
+
+        let ok = true;
+        if (!nombre) { this.setModalError('m-nombre', 'Obligatorio'); ok = false; }
+        else this.clearModalError('m-nombre');
+        if (!creditos || creditos < 1) { this.setModalError('m-creditos', 'MÃ­nimo 1'); ok = false; }
+        else this.clearModalError('m-creditos');
+        if (!notaMinima || notaMinima <= 0 || notaMinima >= parseFloat(escala)) {
+            this.setModalError('m-nota-minima', `Entre 0 y ${escala}`); ok = false;
+        } else this.clearModalError('m-nota-minima');
+        if (!ok) return;
+
+        const semestre = this.getSemestre(numeroSemestre);
+        const materia  = semestre.materias.find(m => m.id === materiaId);
+        if (!materia) return;
+
+        materia.nombre     = nombre;
+        materia.creditos   = creditos;
+        materia.color      = color;
+        materia.escala     = escala;
+        materia.notaMinima = notaMinima;
+        materia.creditosSumados = false;
+        this.perfil.creditosAprobados = this.recalcularTotalCreditos();
+        this.actualizarCreditosMateria(materia);
+        this.guardar();
+        this.cerrarModalMateria();
+
+        if (numeroSemestre === this.perfil.semestreActual) {
+            this.renderizarMaterias();
+            this.renderizarResumen();
+            this.actualizarBarraCreditos();
+        } else {
+            this.renderizarModalSemestreAnt(this.getSemestre(numeroSemestre));
+        }
+        toast(`Materia "${nombre}" actualizada`, 'exito');
+    }
+
+    cerrarModalMateria() {
+        document.getElementById('modal-materia').classList.remove('open');
+        this._modoEdicion   = false;
+        this._materiaEditId = null;
+    }
+
+    guardarMateria(numeroSemestre) {
+        const nombre     = document.getElementById('m-nombre').value.trim();
+        const creditos   = parseInt(document.getElementById('m-creditos').value);
+        const color      = document.getElementById('m-color').value;
+        const escala     = document.getElementById('m-escala').value;
+        const notaMinima = parseFloat(document.getElementById('m-nota-minima').value);
+        const totalNotas = parseInt(document.getElementById('m-total-notas').value);
+
+        let ok = true;
+        if (!nombre) { this.setModalError('m-nombre', 'Obligatorio'); ok = false; }
+        else this.clearModalError('m-nombre');
+        if (!creditos || creditos < 1) { this.setModalError('m-creditos', 'MÃ­nimo 1'); ok = false; }
+        else this.clearModalError('m-creditos');
+        if (!notaMinima || notaMinima <= 0 || notaMinima >= parseFloat(escala)) {
+            this.setModalError('m-nota-minima', `Entre 0 y ${escala}`); ok = false;
+        } else this.clearModalError('m-nota-minima');
+        if (!totalNotas || totalNotas < 1) { this.setModalError('m-total-notas', 'MÃ­nimo 1'); ok = false; }
+        else this.clearModalError('m-total-notas');
+        if (!ok) return;
+
+        if (numeroSemestre === this.perfil.semestreActual) {
+            const semestre         = this.getSemestre(numeroSemestre);
+            const creditosActuales = semestre.materias.reduce((s, m) => s + m.creditos, 0);
+            if (creditosActuales + creditos > this.perfil.maxCreditosSemestre) {
+                this.setModalError('m-creditos', `SuperarÃ­as el mÃ¡ximo de ${this.perfil.maxCreditosSemestre} cr`);
+                return;
+            }
+        }
+
+        const materia = {
+            id: 'mat_' + Date.now(),
+            nombre, creditos, color, escala, notaMinima, totalNotas,
+            actividades: [],
+        };
+
+        const semestre = this.getSemestre(numeroSemestre);
+        semestre.materias.push(materia);
+        this.guardar();
+        this.cerrarModalMateria();
+
+        if (numeroSemestre === this.perfil.semestreActual) {
+            this.renderizarMaterias();
+            this.renderizarResumen();
+            this.verificarAlertas();
+        } else {
+            this.renderizarModalSemestreAnt(semestre);
+        }
+        toast(`Materia "${nombre}" agregada`, 'exito');
+    }
+
+    // â”€â”€ Eliminar materia â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    eliminarMateria(materiaId, numeroSemestre) {
+        const semestre = this.getSemestre(numeroSemestre);
+        const materia  = semestre.materias.find(m => m.id === materiaId);
+        if (!materia) return;
+        if (!confirm(`Â¿Eliminar "${materia.nombre}"? Se borrarÃ¡n todas sus actividades.`)) return;
+
+        semestre.materias             = semestre.materias.filter(m => m.id !== materiaId);
+        this.perfil.historial         = this.perfil.historial.filter(h => h.materiaId !== materiaId);
+        this.perfil.creditosAprobados = this.recalcularTotalCreditos();
+        this.guardar();
+
+        if (numeroSemestre === this.perfil.semestreActual) {
+            this.renderizarMaterias();
+            this.renderizarResumen();
+            this.actualizarBarraCreditos();
+            this.verificarAlertas();
+        } else {
+            this.renderizarModalSemestreAnt(semestre);
+            this.actualizarBarraCreditos();
+        }
+        toast(`Materia "${materia.nombre}" eliminada`, 'info');
+    }
+
+    // â”€â”€ Modal actividad â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    abrirModalActividad(materiaId) {
+        this.materiaActualId = materiaId;
+        this._semActividadId = this.perfil.semestreActual;
+        document.getElementById('form-actividad').reset();
+        document.getElementById('modal-actividad').classList.add('open');
+        document.getElementById('form-actividad').onsubmit = (e) => {
+            e.preventDefault();
+            this.guardarActividad();
+        };
+    }
+
+    abrirModalActividadEn(materiaId, numeroSemestre) {
+        this.materiaActualId = materiaId;
+        this._semActividadId = numeroSemestre;
+        document.getElementById('form-actividad').reset();
+        document.getElementById('modal-actividad').classList.add('open');
+        document.getElementById('form-actividad').onsubmit = (e) => {
+            e.preventDefault();
+            this.guardarActividad();
+        };
+    }
+
+    cerrarModalActividad() {
+        document.getElementById('modal-actividad').classList.remove('open');
+        this.materiaActualId = null;
+    }
+
+    guardarActividad() {
+        const titulo       = document.getElementById('a-titulo').value.trim();
+        const tipo         = document.getElementById('a-tipo').value;
+        const porcentaje   = parseInt(document.getElementById('a-porcentaje').value);
+        const nota         = document.getElementById('a-nota').value;
+        const fecha        = document.getElementById('a-fecha').value;
+        const prioridad    = document.getElementById('a-prioridad').value;
+        const descripcion  = document.getElementById('a-descripcion').value.trim();
+        const recordatorio = document.getElementById('a-recordatorio').value.trim();
+
+        let ok = true;
+        if (!titulo) { this.setModalError('a-titulo', 'Obligatorio'); ok = false; }
+        else this.clearModalError('a-titulo');
+        if (!porcentaje || porcentaje < 1 || porcentaje > 100) {
+            this.setModalError('a-porcentaje', 'Entre 1 y 100'); ok = false;
+        } else this.clearModalError('a-porcentaje');
+        if (!ok) return;
+
+        const numSem   = this._semActividadId || this.perfil.semestreActual;
+        const semestre = this.getSemestre(numSem);
+        const materia  = semestre.materias.find(m => m.id === this.materiaActualId);
+        if (!materia) return;
+
+        const pctUsado = materia.actividades.reduce((s, a) => s + a.porcentaje, 0);
+        if (pctUsado + porcentaje > 100) {
+            this.setModalError('a-porcentaje', `Solo quedan ${100 - pctUsado}%`);
+            return;
+        }
+
+        const actividad = {
+            id: 'act_' + Date.now(),
+            titulo, tipo, porcentaje,
+            nota:        nota !== '' ? parseFloat(nota) : null,
+            fechaLimite: fecha || null,
+            prioridad, descripcion, recordatorio,
+        };
+
+        materia.actividades.push(actividad);
+        materia.creditosSumados       = false;
+        this.perfil.creditosAprobados = this.recalcularTotalCreditos();
+        this.actualizarCreditosMateria(materia);
+        this.guardar();
+        this.actualizarHistorial(materia, numSem);
+        this.cerrarModalActividad();
+
+        if (numSem === this.perfil.semestreActual) {
+            this.renderizarMaterias();
+            this.renderizarResumen();
+            this.actualizarBarraCreditos();
+            this.verificarAlertas();
+        } else {
+            this.renderizarModalSemestreAnt(this.getSemestre(numSem));
+            this.actualizarBarraCreditos();
+        }
+        toast(`Actividad "${titulo}" guardada`, 'exito');
+    }
+
+    // â”€â”€ Eliminar actividad â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    eliminarActividad(materiaId, actividadId, numeroSemestre) {
+        const semestre  = this.getSemestre(numeroSemestre);
+        const materia   = semestre.materias.find(m => m.id === materiaId);
+        if (!materia) return;
+        const actividad = materia.actividades.find(a => a.id === actividadId);
+        if (!actividad) return;
+        if (!confirm(`Â¿Eliminar "${actividad.titulo}"?`)) return;
+
+        materia.actividades           = materia.actividades.filter(a => a.id !== actividadId);
+        materia.creditosSumados       = false;
+        this.perfil.creditosAprobados = this.recalcularTotalCreditos();
+        this.actualizarCreditosMateria(materia);
+        this.guardar();
+        this.actualizarHistorial(materia, numeroSemestre);
+
+        if (numeroSemestre === this.perfil.semestreActual) {
+            this.renderizarMaterias();
+            this.renderizarResumen();
+            this.actualizarBarraCreditos();
+            this.verificarAlertas();
+        } else {
+            this.renderizarModalSemestreAnt(this.getSemestre(numeroSemestre));
+            this.actualizarBarraCreditos();
+        }
+        toast('Actividad eliminada', 'info');
+    }
+
+    actualizarCreditosMateria(materia) {
+        const promedio = this.calcularPromedioMateria(materia);
+        const estado   = this.calcularEstadoMateria(materia, promedio);
+        if (estado === 'aprobada' && !materia.creditosSumados) {
+            this.perfil.creditosAprobados += materia.creditos;
+            materia.creditosSumados = true;
+        }
+        if (estado === 'perdida' && materia.creditosSumados) {
+            this.perfil.creditosAprobados -= materia.creditos;
+            materia.creditosSumados = false;
+        }
+    }
+
+    // â”€â”€ Editar nota â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    editarNota(materiaId, actividadId) {
+        let materia = null;
+        let numSem  = null;
+
+        for (const sem of this.perfil.semestres) {
+            const m = sem.materias.find(m => m.id === materiaId);
+            if (m) { materia = m; numSem = sem.numero; break; }
+        }
+        if (!materia) return;
+
+        const actividad = materia.actividades.find(a => a.id === actividadId);
+        if (!actividad) return;
+
+        const nueva = prompt(
+            `Nota para "${actividad.titulo}"\nEscala: ${materia.escala} Â· MÃ­nimo: ${materia.notaMinima}`,
+            actividad.nota !== null ? actividad.nota : ''
+        );
+        if (nueva === null) return;
+
+        const notaNum = parseFloat(nueva);
+        if (nueva !== '' && (isNaN(notaNum) || notaNum < 0 || notaNum > parseFloat(materia.escala))) {
+            toast(`La nota debe estar entre 0 y ${materia.escala}`, 'error');
+            return;
+        }
+
+        actividad.nota                = nueva !== '' ? notaNum : null;
+        materia.creditosSumados       = false;
+        this.perfil.creditosAprobados = this.recalcularTotalCreditos();
+        this.actualizarCreditosMateria(materia);
+        this.guardar();
+        this.actualizarHistorial(materia, numSem);
+
+        if (numSem === this.perfil.semestreActual) {
+            this.renderizarMaterias();
+            this.renderizarResumen();
+        } else {
+            this.renderizarModalSemestreAnt(this.getSemestre(numSem));
+        }
+        this.actualizarBarraCreditos();
+        this.verificarAlertas();
+        toast('Nota actualizada', 'exito');
+    }
+
+    recalcularTotalCreditos() {
+        return this.perfil.semestres.reduce((total, sem) => {
+            return total + sem.materias
+                .filter(m => this.calcularEstadoMateria(m, this.calcularPromedioMateria(m)) === 'aprobada')
+                .reduce((s, m) => s + m.creditos, 0);
+        }, 0);
+    }
+
+    // â”€â”€ Historial â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    actualizarHistorial(materia, numeroSemestre) {
+        const promedio = this.calcularPromedioMateria(materia);
+        const estado   = this.calcularEstadoMateria(materia, promedio);
+        if (estado !== 'aprobada' && estado !== 'perdida') return;
+
+        let entrada = this.perfil.historial.find(
+            h => h.materiaId === materia.id && h.semestre === numeroSemestre
+        );
+        if (entrada) {
+            entrada.promedio = promedio;
+            entrada.estado   = estado;
+        } else {
+            this.perfil.historial.push({
+                materiaId: materia.id, semestre: numeroSemestre,
+                nombre: materia.nombre, creditos: materia.creditos,
+                promedio, estado,
+            });
+        }
+        this.guardar();
+    }
+
+    renderizarHistorial() {
+        const lista     = document.getElementById('historial-lista');
+        const statsEl   = document.getElementById('historial-stats');
+        const historial = this.perfil.historial;
+
+        if (historial.length === 0) {
+            lista.innerHTML   = `<div class="empty-state"><span class="empty-icon">ðŸ“‹</span><p>AÃºn no hay materias en el historial.</p></div>`;
+            statsEl.innerHTML = '';
+            return;
+        }
+
+        const aprobadas = historial.filter(h => h.estado === 'aprobada');
+        const perdidas  = historial.filter(h => h.estado === 'perdida');
+        const promGen   = aprobadas.length > 0
+            ? (aprobadas.reduce((s, h) => s + h.promedio, 0) / aprobadas.length).toFixed(2) : 'â€”';
+        const mejor = historial.reduce((a, b) => (!a || b.promedio > a.promedio ? b : a), null);
+        const peor  = historial.reduce((a, b) => (!a || b.promedio < a.promedio ? b : a), null);
+
+        statsEl.innerHTML = `
+            <div class="stat-card"><div class="stat-valor">${promGen}</div><div class="stat-label">Promedio general</div></div>
+            <div class="stat-card"><div class="stat-valor" style="color:var(--success)">${aprobadas.length}</div><div class="stat-label">Aprobadas</div></div>
+            <div class="stat-card"><div class="stat-valor" style="color:var(--danger)">${perdidas.length}</div><div class="stat-label">Perdidas</div></div>
+            <div class="stat-card"><div class="stat-valor">${this.perfil.creditosAprobados}</div><div class="stat-label">CrÃ©ditos aprobados</div></div>
+            ${mejor ? `<div class="stat-card"><div class="stat-valor" style="color:var(--success);font-size:1rem">${sanitizeHTML(mejor.nombre)}</div><div class="stat-label">Mejor (${mejor.promedio.toFixed(2)})</div></div>` : ''}
+            ${peor  ? `<div class="stat-card"><div class="stat-valor" style="color:var(--danger);font-size:1rem">${sanitizeHTML(peor.nombre)}</div><div class="stat-label">MÃ¡s baja (${peor.promedio.toFixed(2)})</div></div>` : ''}`;
+
+        const porSemestre = {};
+        historial.forEach(h => {
+            if (!porSemestre[h.semestre]) porSemestre[h.semestre] = [];
+            porSemestre[h.semestre].push(h);
+        });
+
+        lista.innerHTML = Object.keys(porSemestre).sort((a, b) => a - b).map(sem => `
+            <div class="historial-semestre">
+                <div class="historial-sem-titulo">ðŸ“š Semestre ${sem}</div>
+                ${porSemestre[sem].map(h => `
+                    <div class="historial-materia">
+                        <div>
+                            <span class="hm-nombre">${h.estado === 'aprobada' ? 'âœ…' : 'âŒ'} ${sanitizeHTML(h.nombre)}</span>
+                            <span class="hm-creditos"> Â· ${h.creditos} cr</span>
+                        </div>
+                        <span class="hm-nota ${h.estado}">${h.promedio.toFixed(2)}</span>
+                    </div>`).join('')}
+            </div>`).join('');
+    }
+
+    // â”€â”€ EstadÃ­sticas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    renderizarEstadisticas() {
+        const p   = this.perfil;
+        const pct = ((p.creditosAprobados / p.totalCreditos) * 100).toFixed(1);
+
+        document.getElementById('stats-grid').innerHTML = `
+            <div class="stat-card"><div class="stat-valor">${pct}%</div><div class="stat-label">Progreso carrera</div></div>
+            <div class="stat-card"><div class="stat-valor">${p.semestreActual}</div><div class="stat-label">Semestre actual</div></div>
+            <div class="stat-card"><div class="stat-valor">${p.totalSemestres - p.semestreActual}</div><div class="stat-label">Semestres restantes</div></div>
+            <div class="stat-card"><div class="stat-valor">${p.totalCreditos - p.creditosAprobados}</div><div class="stat-label">CrÃ©ditos faltantes</div></div>`;
+        this.renderizarGrafica();
+    }
+
+    renderizarGrafica() {
+        const canvas = document.getElementById('grafica-rendimiento');
+        if (!canvas) return;
+
+        const porSemestre = {};
+        this.perfil.historial.forEach(h => {
+            if (!porSemestre[h.semestre]) porSemestre[h.semestre] = [];
+            porSemestre[h.semestre].push(h.promedio);
+        });
+
+        const keys   = Object.keys(porSemestre).sort((a, b) => a - b);
+        const labels = keys.map(s => `Sem. ${s}`);
+        const datos  = keys.map(k => (porSemestre[k].reduce((a, b) => a + b, 0) / porSemestre[k].length).toFixed(2));
+
+        if (this.grafica) this.grafica.destroy();
+
+        this.grafica = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Promedio',
+                    data: datos,
+                    borderColor: '#06b6d4',
+                    backgroundColor: 'rgba(6,182,212,0.07)',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#2563eb',
+                    pointBorderColor: '#06b6d4',
+                    pointRadius: 7,
+                    pointHoverRadius: 10,
+                    tension: 0.4,
+                    fill: true,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(13,21,38,0.95)',
+                        borderColor: 'rgba(37,99,235,0.4)',
+                        borderWidth: 1,
+                        titleColor: '#06b6d4',
+                        bodyColor: '#e2e8f0',
+                        callbacks: { label: ctx => `Promedio: ${ctx.raw}` }
+                    }
+                },
+                scales: {
+                    y: {
+                        min: 0,
+                        max: parseFloat(this.perfil.escalaNotas),
+                        grid:  { color: 'rgba(255,255,255,0.04)' },
+                        ticks: { color: 'rgba(255,255,255,0.4)', font: { family: 'DM Sans' } }
+                    },
+                    x: {
+                        grid:  { display: false },
+                        ticks: { color: 'rgba(255,255,255,0.4)', font: { family: 'DM Sans' } }
+                    }
+                }
+            }
+        });
+    }
+
+    // â”€â”€ Alertas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    verificarAlertas() {
+        const contenedor = document.getElementById('alertas-section');
+        contenedor.innerHTML = '';
+        const semestre = this.getSemestreActual();
+        const hoy      = new Date().toISOString().split('T')[0];
+        const manana   = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+        const alertas  = [];
+
+        semestre.materias.forEach(materia => {
+            const promedio = this.calcularPromedioMateria(materia);
+            const estado   = this.calcularEstadoMateria(materia, promedio);
+            if (estado === 'riesgo') {
+                alertas.push({ tipo: 'riesgo',
+                    texto: `âš ï¸ ${materia.nombre} estÃ¡ en riesgo matemÃ¡tico.` });
+            }
+            materia.actividades.forEach(act => {
+                if (!act.nota && act.fechaLimite) {
+                    if (act.fechaLimite === hoy)
+                        alertas.push({ tipo: 'fecha', texto: `ðŸ”´ "${act.titulo}" en ${materia.nombre} vence HOY.` });
+                    else if (act.fechaLimite === manana)
+                        alertas.push({ tipo: 'fecha', texto: `ðŸŸ¡ "${act.titulo}" en ${materia.nombre} vence maÃ±ana.` });
+                }
+            });
+        });
+
+        alertas.forEach((a, i) => {
+            const div = document.createElement('div');
+            div.className = `alerta ${a.tipo}`;
+            div.style.animationDelay = `${i * 0.08}s`;
+            div.textContent = a.texto;
+            contenedor.appendChild(div);
+        });
+    }
+
+    programarAlertas() {
+        setInterval(() => this.verificarAlertas(), 3600000);
+    }
+
+    // â”€â”€ Modal perfil â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    abrirModalPerfil() {
+        const p      = this.perfil;
+        const titulo = this.calcularTitulo(p.carrera);
+        const nombre = titulo ? `${titulo} ${p.nombreUsuario}` : p.nombreUsuario;
+        const pct    = ((p.creditosAprobados / p.totalCreditos) * 100).toFixed(1);
+
+        document.getElementById('perfil-modal-body').innerHTML = `
+            <div class="perfil-modal-avatar">${p.nombreUsuario.charAt(0).toUpperCase()}</div>
+            <div class="perfil-modal-nombre">${sanitizeHTML(nombre)}</div>
+            <div class="perfil-modal-info">
+                ${[
+                    ['Universidad', p.universidad],
+                    ['Carrera',     p.carrera],
+                    p.facultad ? ['Facultad', p.facultad] : null,
+                    ['Modalidad',   p.modalidad || 'â€”'],
+                    ['Semestre',    `${p.semestreActual} / ${p.totalSemestres}`],
+                    ['CrÃ©ditos',    `${p.creditosAprobados} / ${p.totalCreditos}`],
+                    ['Progreso',    `${pct}%`],
+                    ['Escala',      `0 â€” ${p.escalaNotas}`],
+                    ['Nota mÃ­nima', p.notaMinima],
+                    p.aÃ±oIngreso ? ['AÃ±o ingreso', p.aÃ±oIngreso] : null,
+                ].filter(Boolean).map(([label, valor]) => `
+                    <div class="perfil-info-item">
+                        <span class="perfil-info-label">${label}</span>
+                        <span class="perfil-info-valor">${sanitizeHTML(String(valor))}</span>
+                    </div>`).join('')}
+            </div>`;
+
+        document.getElementById('modal-perfil').classList.add('open');
+    }
+
+    cerrarModalPerfil() {
+        document.getElementById('modal-perfil').classList.remove('open');
+    }
+
+    // â”€â”€ Horario semanal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    renderizarHorario() {
+        const grid  = document.getElementById('horario-grid');
+        const dias  = ['Lunes', 'Martes', 'MiÃ©rcoles', 'Jueves', 'Viernes'];
+        const horas = [];
+        for (let h = 6; h <= 20; h++) horas.push(h);
+
+        // Poblar select de materias en el modal
+        const semestre  = this.getSemestreActual();
+        const selectMat = document.getElementById('h-materia');
+        selectMat.innerHTML = '<option value="">â€” Selecciona â€”</option>';
+        semestre.materias.forEach(m => {
+            selectMat.innerHTML += `<option value="${m.id}" data-color="${m.color}">${sanitizeHTML(m.nombre)}</option>`;
+        });
+
+        // Construir grid
+        let html = '';
+
+        // Header fila
+        html += `<div class="horario-header"></div>`;
+        dias.forEach(d => {
+            html += `<div class="horario-header">${d}</div>`;
+        });
+
+        // Filas de horas
+        horas.forEach(hora => {
+            const horaLabel = hora < 12 ? `${hora}:00 AM`
+                : hora === 12 ? '12:00 PM'
+                : `${hora - 12}:00 PM`;
+            html += `<div class="horario-hora">${horaLabel}</div>`;
+
+            dias.forEach((_, diaIdx) => {
+                const clase = (this.perfil.horario || []).find(
+                    c => c.dia === diaIdx && c.horaInicio === hora
+                );
+                const ocupada = (this.perfil.horario || []).find(
+                    c => c.dia === diaIdx && hora > c.horaInicio && hora < c.horaInicio + c.duracion
+                );
+
+                if (clase) {
+                    const materia = semestre.materias.find(m => m.id === clase.materiaId);
+                    const nombre  = materia ? materia.nombre : clase.nombreMateria;
+                    const color   = materia ? materia.color : clase.color || '#2563eb';
+                    html += `
+                        <div class="horario-celda">
+                            <div class="horario-bloque"
+                                style="background:${color};grid-row:span ${clase.duracion}"
+                                onclick="dashboard.eliminarClaseHorario('${clase.id}')"
+                                title="Click para eliminar Â· ${nombre}${clase.salon ? ' Â· ' + clase.salon : ''}">
+                                <div class="horario-bloque-nombre">${sanitizeHTML(nombre)}</div>
+                                <div class="horario-bloque-hora">${horaLabel}${clase.salon ? ' Â· ' + sanitizeHTML(clase.salon) : ''}</div>
+                            </div>
+                        </div>`;
+                } else if (!ocupada) {
+                    html += `
+                        <div class="horario-celda"
+                            onclick="dashboard.abrirModalHorarioEn(${diaIdx}, ${hora})">
+                            <div class="horario-celda-vacia">+</div>
+                        </div>`;
+                } else {
+                    html += `<div class="horario-celda"></div>`;
+                }
+            });
+        });
+
+        grid.innerHTML = html;
+    }
+
+    abrirModalHorario() {
+        const semestre = this.getSemestreActual();
+        const select   = document.getElementById('h-materia');
+        select.innerHTML = '<option value="">â€” Selecciona â€”</option>';
+        semestre.materias.forEach(m => {
+            select.innerHTML += `<option value="${m.id}">${sanitizeHTML(m.nombre)}</option>`;
+        });
+        document.getElementById('modal-horario').classList.add('open');
+    }
+
+    abrirModalHorarioEn(dia, hora) {
+        document.getElementById('h-dia').value  = dia;
+        document.getElementById('h-hora').value = hora;
+        this.abrirModalHorario();
+    }
+
+    guardarClaseHorario() {
+        const materiaId = document.getElementById('h-materia').value;
+        const dia       = parseInt(document.getElementById('h-dia').value);
+        const horaInicio= parseInt(document.getElementById('h-hora').value);
+        const duracion  = parseInt(document.getElementById('h-duracion').value);
+        const salon     = document.getElementById('h-salon').value.trim();
+
+        if (!materiaId) { toast('Selecciona una materia', 'error'); return; }
+
+        // Verificar solapamiento
+        const solapamiento = (this.perfil.horario || []).find(c => {
+            if (c.dia !== dia) return false;
+            return horaInicio < c.horaInicio + c.duracion && horaInicio + duracion > c.horaInicio;
+        });
+        if (solapamiento) { toast('Ya existe una clase en ese horario', 'error'); return; }
+
+        const semestre = this.getSemestreActual();
+        const materia  = semestre.materias.find(m => m.id === materiaId);
+
+        if (!this.perfil.horario) this.perfil.horario = [];
+        this.perfil.horario.push({
+            id: 'hor_' + Date.now(),
+            materiaId, dia, horaInicio, duracion, salon,
+            nombreMateria: materia ? materia.nombre : '',
+            color:         materia ? materia.color : '#2563eb',
+        });
+
+        this.guardar();
+        cerrarModal('modal-horario');
+        this.renderizarHorario();
+        toast('Clase agregada al horario âœ…', 'exito');
+    }
+
+    eliminarClaseHorario(claseId) {
+        if (!confirm('Â¿Eliminar esta clase del horario?')) return;
+        this.perfil.horario = (this.perfil.horario || []).filter(c => c.id !== claseId);
+        this.guardar();
+        this.renderizarHorario();
+        toast('Clase eliminada', 'info');
+    }
+
+    limpiarHorario() {
+        if (!confirm('Â¿Limpiar todo el horario?')) return;
+        this.perfil.horario = [];
+        this.guardar();
+        this.renderizarHorario();
+        toast('Horario limpiado', 'info');
+    }
+
+    // â”€â”€ Herramientas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    renderizarHerramientas() {
+        this.renderizarRitmo();
+        this.poblarSelectsHerramientas();
+    }
+
+    renderizarRitmo() {
+        const p             = this.perfil;
+        const semActual     = p.semestreActual;
+        const totalSems     = p.totalSemestres;
+        const creditosTotal = p.totalCreditos;
+        const creditosAprob = p.creditosAprobados;
+
+        const pctSemestral = semActual / totalSems;
+        const pctCreditos  = creditosAprob / creditosTotal;
+        const diff         = pctCreditos - pctSemestral;
+
+        let emoji, texto, color, subtexto;
+
+        if (diff >= 0.05) {
+            emoji    = 'ðŸš€';
+            texto    = 'Â¡Vas adelantado!';
+            color    = 'var(--success)';
+            subtexto = `Llevas el ${(pctCreditos * 100).toFixed(1)}% de crÃ©ditos con solo el ${(pctSemestral * 100).toFixed(1)}% del tiempo transcurrido. Â¡Excelente ritmo!`;
+        } else if (diff >= -0.05) {
+            emoji    = 'âœ…';
+            texto    = 'Vas en buen ritmo';
+            color    = 'var(--cyan)';
+            subtexto = `EstÃ¡s exactamente donde deberÃ­as. MantÃ©n el ritmo para graduarte en ${totalSems - semActual + 1} semestres.`;
+        } else if (diff >= -0.15) {
+            emoji    = 'âš ï¸';
+            texto    = 'Vas un poco atrasado';
+            color    = 'var(--warning)';
+            subtexto = `Tienes el ${(pctCreditos * 100).toFixed(1)}% de crÃ©ditos pero ya vas en el ${(pctSemestral * 100).toFixed(1)}% del tiempo. Considera tomar mÃ¡s crÃ©ditos el prÃ³ximo semestre.`;
+        } else {
+            emoji    = 'ðŸ”´';
+            texto    = 'Vas atrasado';
+            color    = 'var(--danger)';
+            subtexto = `Llevas un dÃ©ficit significativo de crÃ©ditos. Habla con tu asesor acadÃ©mico para crear un plan de recuperaciÃ³n.`;
+        }
+
+        const creditosIdeal = Math.round(pctSemestral * creditosTotal);
+
+        document.getElementById('ritmo-indicador').innerHTML = `
+            <div class="ritmo-emoji">${emoji}</div>
+            <div class="ritmo-texto" style="color:${color}">${texto}</div>
+            <div class="ritmo-subtexto">${subtexto}</div>
+            <div class="ritmo-barra-wrap">
+                <div class="ritmo-barra-labels">
+                    <span>0 cr</span>
+                    <span>Ideal: ${creditosIdeal} cr</span>
+                    <span>Meta: ${creditosTotal} cr</span>
+                </div>
+                <div class="ritmo-barra">
+                    <div class="ritmo-fill-ideal" style="width:${(pctSemestral * 100).toFixed(1)}%"></div>
+                    <div class="ritmo-fill-real" style="width:${(pctCreditos * 100).toFixed(1)}%;background:${color};opacity:0.7"></div>
+                </div>
+            </div>
+            <div style="display:flex;gap:24px;font-size:0.8rem;color:var(--gray-500)">
+                <span>ðŸ“ Real: <strong style="color:${color}">${creditosAprob} cr</strong></span>
+                <span>ðŸŽ¯ Ideal ahora: <strong style="color:var(--cyan)">${creditosIdeal} cr</strong></span>
+                <span>ðŸ Meta: <strong style="color:white">${creditosTotal} cr</strong></span>
+            </div>`;
+    }
+
+    poblarSelectsHerramientas() {
+        const semestre  = this.getSemestreActual();
+        const materias  = semestre.materias;
+        const opciones  = materias.map(m =>
+            `<option value="${m.id}">${sanitizeHTML(m.nombre)}</option>`
+        ).join('');
+        const placeholder = '<option value="">â€” Selecciona una materia â€”</option>';
+
+        document.getElementById('calc-materia').innerHTML = placeholder + opciones;
+        document.getElementById('sim-materia').innerHTML  = placeholder + opciones;
+
+        document.getElementById('calc-resultado').classList.remove('visible');
+        document.getElementById('sim-resultado').classList.remove('visible');
+        document.getElementById('sim-controles').innerHTML = '';
+    }
+
+    calcularNotaNecesaria() {
+        const materiaId = document.getElementById('calc-materia').value;
+        const resultado = document.getElementById('calc-resultado');
+        const valorEl   = document.getElementById('calc-valor');
+        const labelEl   = document.getElementById('calc-label');
+
+        if (!materiaId) { resultado.classList.remove('visible'); return; }
+
+        const semestre = this.getSemestreActual();
+        const materia  = semestre.materias.find(m => m.id === materiaId);
+        if (!materia) return;
+
+        const conNota    = materia.actividades.filter(a => a.nota !== null && a.nota !== '');
+        const sinNota    = materia.actividades.filter(a => a.nota === null || a.nota === '');
+        const pctConNota = conNota.reduce((s, a) => s + a.porcentaje, 0);
+        const pctSinNota = sinNota.reduce((s, a) => s + a.porcentaje, 0);
+        const pctFaltante= 100 - pctConNota - pctSinNota;
+
+        const promedioActual = conNota.length > 0
+            ? conNota.reduce((s, a) => s + parseFloat(a.nota) * a.porcentaje, 0) / 100
+            : 0;
+
+        const escala     = parseFloat(materia.escala);
+        const notaMinima = materia.notaMinima;
+
+        if (sinNota.length === 0 && pctFaltante === 0) {
+            const prom = this.calcularPromedioMateria(materia);
+            valorEl.textContent = prom !== null ? prom.toFixed(2) : 'â€”';
+            valorEl.style.color = prom >= notaMinima ? 'var(--success)' : 'var(--danger)';
+            labelEl.textContent = prom >= notaMinima ? 'Ya tienes todas las notas y aprobaste âœ…' : 'Ya tienes todas las notas y perdiste âŒ';
+            resultado.classList.add('visible');
+            return;
+        }
+
+        // CuÃ¡nto necesito en las actividades restantes (sin nota) para alcanzar notaMinima
+        // promedioActual + (notaNecesaria * pctRestante / 100) >= notaMinima
+        const pctRestante    = pctSinNota + pctFaltante;
+        const notaNecesaria  = pctRestante > 0
+            ? ((notaMinima - promedioActual) * 100) / pctRestante
+            : null;
+
+        resultado.classList.add('visible');
+
+        if (notaNecesaria === null) {
+            valorEl.textContent = 'â€”';
+            valorEl.style.color = 'var(--gray-500)';
+            labelEl.textContent = 'No hay actividades pendientes registradas.';
+        } else if (notaNecesaria <= 0) {
+            valorEl.textContent = 'Â¡Ya aprobaste!';
+            valorEl.style.color = 'var(--success)';
+            labelEl.textContent = `Con tus notas actuales ya superas el mÃ­nimo de ${notaMinima}. Â¡Sigue asÃ­!`;
+        } else if (notaNecesaria > escala) {
+            valorEl.textContent = 'Imposible';
+            valorEl.style.color = 'var(--danger)';
+            labelEl.textContent = `NecesitarÃ­as ${notaNecesaria.toFixed(2)} pero el mÃ¡ximo es ${escala}. La materia estÃ¡ matemÃ¡ticamente perdida.`;
+        } else {
+            valorEl.textContent = notaNecesaria.toFixed(2);
+            const pct = (notaNecesaria / escala) * 100;
+            valorEl.style.color = pct > 80 ? 'var(--warning)' : 'var(--success)';
+            labelEl.textContent = `Necesitas sacar mÃ­nimo ${notaNecesaria.toFixed(2)} en las ${sinNota.length} actividad(es) restantes (${pctRestante}% del total) para aprobar con ${notaMinima}.`;
+        }
+    }
+
+    cargarSimulador() {
+        const materiaId  = document.getElementById('sim-materia').value;
+        const controles  = document.getElementById('sim-controles');
+        const resultado  = document.getElementById('sim-resultado');
+
+        controles.innerHTML = '';
+        resultado.classList.remove('visible');
+        if (!materiaId) return;
+
+        const semestre = this.getSemestreActual();
+        const materia  = semestre.materias.find(m => m.id === materiaId);
+        if (!materia) return;
+
+        const escala = parseFloat(materia.escala);
+
+        // Actividades sin nota para simular
+        const sinNota = materia.actividades.filter(a => a.nota === null || a.nota === '');
+
+        if (sinNota.length === 0) {
+            controles.innerHTML = `<p style="color:var(--gray-500);font-size:0.85rem;margin-bottom:12px">
+                Esta materia ya tiene todas las notas ingresadas.</p>`;
+            const prom = this.calcularPromedioMateria(materia);
+            document.getElementById('sim-valor').textContent = prom !== null ? prom.toFixed(2) : 'â€”';
+            document.getElementById('sim-valor').style.color = prom >= materia.notaMinima ? 'var(--success)' : 'var(--danger)';
+            document.getElementById('sim-label').textContent = prom >= materia.notaMinima ? 'âœ… Aprobada' : 'âŒ Perdida';
+            resultado.classList.add('visible');
+            return;
+        }
+
+        // Sliders para cada actividad sin nota
+        const sliders = sinNota.map((act, idx) => ({
+            id:  `slider_${act.id}`,
+            act, valor: escala / 2,
+        }));
+
+        controles.innerHTML = sliders.map((s, idx) => `
+            <div class="sim-slider-wrap">
+                <div class="sim-slider-label">
+                    <span>${sanitizeHTML(s.act.titulo)} <small style="opacity:0.5">(${s.act.porcentaje}%)</small></span>
+                    <strong id="val_${s.id}">${(escala / 2).toFixed(1)}</strong>
+                </div>
+                <input type="range" class="sim-slider" id="${s.id}"
+                    min="0" max="${escala}" step="${escala >= 10 ? 0.5 : 0.1}"
+                    value="${escala / 2}"
+                    oninput="dashboard.actualizarSimulador('${materiaId}')">
+            </div>`).join('');
+
+        this.actualizarSimulador(materiaId);
+    }
+
+    actualizarSimulador(materiaId) {
+        const semestre = this.getSemestreActual();
+        const materia  = semestre.materias.find(m => m.id === materiaId);
+        if (!materia) return;
+
+        const escala   = parseFloat(materia.escala);
+        const sinNota  = materia.actividades.filter(a => a.nota === null || a.nota === '');
+
+        // Leer sliders
+        const notasSimuladas = sinNota.map(act => {
+            const slider = document.getElementById(`slider_act_${act.id}`) ||
+                           document.querySelector(`input[id*="${act.id}"]`);
+            const val    = slider ? parseFloat(slider.value) : escala / 2;
+            // Actualizar label
+            const labelEl = document.getElementById(`val_slider_${act.id}`) ||
+                            document.querySelector(`[id="val_slider_${act.id}"]`);
+
+            // Buscar el strong asociado al slider
+            const sliderEl = document.querySelector(`input[id*="${act.id}"]`);
+            if (sliderEl) {
+                const wrap  = sliderEl.closest('.sim-slider-wrap');
+                const strong= wrap ? wrap.querySelector('strong') : null;
+                if (strong) strong.textContent = parseFloat(sliderEl.value).toFixed(1);
+            }
+            return { porcentaje: act.porcentaje, nota: val };
+        });
+
+        // Calcular promedio simulado
+        const conNota   = materia.actividades.filter(a => a.nota !== null && a.nota !== '');
+        let totalPuntos = conNota.reduce((s, a) => s + parseFloat(a.nota) * a.porcentaje, 0);
+        let totalPct    = conNota.reduce((s, a) => s + a.porcentaje, 0);
+
+        notasSimuladas.forEach(n => {
+            totalPuntos += n.nota * n.porcentaje;
+            totalPct    += n.porcentaje;
+        });
+
+        const promedioSim = totalPct > 0 ? totalPuntos / totalPct : 0;
+        const aprobada    = promedioSim >= materia.notaMinima;
+
+        document.getElementById('sim-valor').textContent = promedioSim.toFixed(2);
+        document.getElementById('sim-valor').style.color = aprobada ? 'var(--success)' : 'var(--danger)';
+        document.getElementById('sim-label').textContent = aprobada
+            ? `âœ… AprobarÃ­as con ${promedioSim.toFixed(2)} (mÃ­nimo: ${materia.notaMinima})`
+            : `âŒ PerderÃ­as con ${promedioSim.toFixed(2)} (necesitas: ${materia.notaMinima})`;
+        document.getElementById('sim-resultado').classList.add('visible');
+    }
+
+    // â”€â”€ NavegaciÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    mostrarSeccion(id, el) {
+        document.querySelectorAll('.seccion').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(`sec-${id}`).classList.add('active');
+        if (el) el.classList.add('active');
+
+        // Cerrar sidebar en mÃ³vil
+        if (window.innerWidth <= 768)
+            document.getElementById('sidebar').classList.remove('open');
+
+        if (id === 'historial')    this.renderizarHistorial();
+        if (id === 'estadisticas') this.renderizarEstadisticas();
+        if (id === 'semestres')    this.renderizarSemestresLista();
+        if (id === 'horario')      this.renderizarHorario();
+        if (id === 'herramientas') this.renderizarHerramientas();
+    }
+
+    renderizarSemestresLista() {
+        const lista = document.getElementById('semestres-lista');
+        lista.innerHTML = '';
+        const p = this.perfil;
+
+        for (let i = 1; i <= p.semestreActual; i++) {
+            const semestre    = this.perfil.semestres.find(s => s.numero === i) || { numero: i, materias: [] };
+            const esActual    = i === p.semestreActual;
+            const creditosSem = semestre.materias.reduce((s, m) => s + m.creditos, 0);
+
+            const item = document.createElement('div');
+            item.className = 'semestre-item';
+            item.style.animationDelay = `${(i - 1) * 0.06}s`;
+            item.innerHTML = `
+                <div class="semestre-item-header">
+                    <span class="semestre-item-titulo">Semestre ${i}</span>
+                    <span class="semestre-item-estado ${esActual ? 'estado-curso' : 'estado-anterior'}">
+                        ${esActual ? 'En curso' : 'Anterior'}
+                    </span>
+                </div>
+                <div class="semestre-item-meta">
+                    <span>${semestre.materias.length} materias</span>
+                    <span>${creditosSem} crÃ©ditos</span>
+                </div>`;
+
+            item.onclick = esActual
+                ? () => this.mostrarSeccion('semestre', document.querySelector('.nav-item'))
+                : () => this.abrirModalSemestreAnt(i);
+
+            lista.appendChild(item);
+        }
+    }
+
+    // â”€â”€ Helpers modales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    setModalError(id, msg) {
+        const input = document.getElementById(id);
+        const err   = document.getElementById('error-' + id);
+        if (input) input.style.borderColor = 'var(--danger)';
+        if (err)   err.textContent = msg;
+    }
+
+    clearModalError(id) {
+        const input = document.getElementById(id);
+        const err   = document.getElementById('error-' + id);
+        if (input) input.style.borderColor = '';
+        if (err)   err.textContent = '';
+    }
+
+    limpiarErroresMateria() {
+        ['m-nombre', 'm-creditos', 'm-nota-minima', 'm-total-notas'].forEach(id => {
+            this.clearModalError(id);
+        });
+    }
+
+    // â”€â”€ SesiÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    cerrarSesion() {
+        if (confirm('Â¿Cerrar sesiÃ³n?')) {
+            storage.logout();
+            window.location.href = 'login.html';
+        }
+    }
+
+    configurarEventos() {
+        document.addEventListener('click', (e) => {
+            const sidebar = document.getElementById('sidebar');
+            if (window.innerWidth <= 768 &&
+                sidebar.classList.contains('open') &&
+                !sidebar.contains(e.target) &&
+                !e.target.classList.contains('menu-toggle')) {
+                sidebar.classList.remove('open');
+            }
+        });
+    }
+}
+
+// â”€â”€ Funciones globales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+}
+
+function cerrarModal(id) {
+    document.getElementById(id).classList.remove('open');
+}
+
+function cerrarModalSiOverlay(event, id) {
+    if (event.target === event.currentTarget) {
+        cerrarModal(id);
+        if (id === 'modal-semestre-ant' && dashboard)
+            dashboard.semestreModalId = null;
+    }
+}
+
+// â”€â”€ Cargar Chart.js e inicializar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const chartScript  = document.createElement('script');
+chartScript.src    = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+chartScript.onload = () => { dashboard = new Dashboard(); };
+document.head.appendChild(chartScript);
+
+let dashboard;

@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Universitario</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+</head>
+<body>
+
+  <canvas id="particles-canvas"></canvas>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">📚</span>
+      <span class="brand-name">AcadémicoPro</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="nav-item active" onclick="dashboard.mostrarSeccion('semestre', this)">
+        <span class="nav-icon">📖</span>
+        <span>Semestre Actual</span>
+        <span class="nav-glow"></span>
+      </a>
+      <a class="nav-item" onclick="dashboard.mostrarSeccion('semestres', this)">
+        <span class="nav-icon">🗂️</span>
+        <span>Mis Semestres</span>
+        <span class="nav-glow"></span>
+      </a>
+      <a class="nav-item" onclick="dashboard.mostrarSeccion('historial', this)">
+        <span class="nav-icon">📋</span>
+        <span>Historial</span>
+        <span class="nav-glow"></span>
+      </a>
+      <a class="nav-item" onclick="dashboard.mostrarSeccion('estadisticas', this)">
+        <span class="nav-icon">📊</span>
+        <span>Estadísticas</span>
+        <span class="nav-glow"></span>
+      </a>
+      <a class="nav-item" onclick="dashboard.mostrarSeccion('horario', this)">
+        <span class="nav-icon">🗓️</span>
+        <span>Horario</span>
+        <span class="nav-glow"></span>
+      </a>
+      <a class="nav-item" onclick="dashboard.mostrarSeccion('herramientas', this)">
+        <span class="nav-icon">🧮</span>
+        <span>Herramientas</span>
+        <span class="nav-glow"></span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="dashboard.cerrarSesion()">
+        <span>🚪</span> Cerrar sesión
+      </button>
+    </div>
+  </aside>
+
+  <!-- Contenido principal -->
+  <div class="main-content">
+
+    <!-- Header -->
+    <header class="top-header">
+      <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+      <div class="header-info">
+        <h1 id="header-universidad">Universidad</h1>
+        <p id="header-carrera">Carrera</p>
+      </div>
+      <div class="theme-toggle">
+        <span class="theme-toggle-label" id="theme-label">Oscuro</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="theme-checkbox" onchange="dashboard.toggleTema(this.checked)">
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div class="header-usuario" onclick="dashboard.abrirModalPerfil()">
+        <div class="avatar" id="header-avatar">U</div>
+        <span id="header-nombre">Usuario</span>
+        <span class="avatar-arrow">▾</span>
+      </div>
+    </header>
+
+    <!-- ── Sección: Semestre actual ── -->
+    <section class="seccion active" id="sec-semestre">
+
+      <div class="resumen-grid" id="resumen-grid"></div>
+
+      <div class="perfil-resumen">
+        <div class="perfil-info">
+          <h2 id="perfil-nombre">Usuario</h2>
+          <p id="perfil-universidad">Universidad</p>
+          <p id="perfil-carrera">Carrera</p>
+        </div>
+        <div class="creditos-barra-wrap">
+          <div class="creditos-label">
+            <span>Progreso de carrera</span>
+            <span id="creditos-texto">0 / 0 créditos</span>
+          </div>
+          <div class="barra-progreso">
+            <div class="barra-fill" id="barra-creditos"></div>
+          </div>
+          <div class="creditos-meta">
+            <span>Mín. semestre: <strong id="min-sem">0</strong> cr</span>
+            <span>Máx. semestre: <strong id="max-sem">0</strong> cr</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bloques-section">
+        <h3>Semestres</h3>
+        <div class="bloques-grid" id="bloques-grid"></div>
+      </div>
+
+      <div class="materias-section">
+        <div class="materias-header">
+          <h3>Semestre <span id="num-semestre-actual">1</span> — En curso</h3>
+          <div class="materias-acciones">
+            <button class="btn-cerrar-semestre" onclick="dashboard.confirmarCerrarSemestre()">
+              🎓 Cerrar semestre
+            </button>
+            <button class="btn-agregar-materia" onclick="dashboard.abrirModalMateria(null)">
+              + Agregar materia
+            </button>
+          </div>
+        </div>
+        <div class="materias-grid" id="materias-grid">
+          <div class="empty-state">
+            <div class="empty-icon">🎒</div>
+            <p>Aún no hay materias. ¡Agrega tu primera materia!</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="alertas-section" id="alertas-section"></div>
+
+    </section>
+
+    <!-- ── Sección: Mis semestres ── -->
+    <section class="seccion" id="sec-semestres">
+      <div class="seccion-header">
+        <h2>Mis Semestres</h2>
+        <p>Haz click en cualquier semestre para ver o agregar materias</p>
+      </div>
+      <div class="semestres-lista" id="semestres-lista"></div>
+    </section>
+
+    <!-- ── Sección: Historial ── -->
+    <section class="seccion" id="sec-historial">
+      <div class="seccion-header"><h2>Historial Académico</h2></div>
+      <div class="historial-stats" id="historial-stats"></div>
+      <div class="historial-lista" id="historial-lista"></div>
+    </section>
+
+    <!-- ── Sección: Estadísticas ── -->
+    <section class="seccion" id="sec-estadisticas">
+      <div class="seccion-header"><h2>Estadísticas</h2></div>
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="grafica-wrap">
+        <h3>Promedio por semestre</h3>
+        <canvas id="grafica-rendimiento"></canvas>
+      </div>
+    </section>
+
+    <!-- ── Sección: Horario ── -->
+    <section class="seccion" id="sec-horario">
+      <div class="seccion-header">
+        <h2>Horario Semanal</h2>
+        <p>Visualiza tus clases de la semana</p>
+      </div>
+      <div class="horario-acciones">
+        <button class="btn-agregar-materia" onclick="dashboard.abrirModalHorario()">
+          + Agregar clase
+        </button>
+        <button class="btn-cerrar-semestre" onclick="dashboard.limpiarHorario()">
+          🗑️ Limpiar horario
+        </button>
+      </div>
+      <div class="sim-card" style="padding:0;overflow:auto">
+        <div class="horario-grid" id="horario-grid"></div>
+      </div>
+    </section>
+
+    <!-- ── Sección: Herramientas ── -->
+    <section class="seccion" id="sec-herramientas">
+      <div class="seccion-header">
+        <h2>Herramientas Académicas</h2>
+        <p>Simulador de notas, calculadora y seguimiento de ritmo</p>
+      </div>
+
+      <div class="sim-card">
+        <div class="sim-titulo">🎯 ¿Voy a tiempo para graduarme?</div>
+        <div class="ritmo-indicador" id="ritmo-indicador"></div>
+      </div>
+
+      <div class="sim-card">
+        <div class="sim-titulo">🧮 Calculadora — Nota necesaria</div>
+        <p style="color:var(--gray-500);font-size:0.85rem;margin-bottom:16px">
+          ¿Cuánto necesitas sacar en las actividades restantes para aprobar?
+        </p>
+        <select class="sim-select" id="calc-materia" onchange="dashboard.calcularNotaNecesaria()">
+          <option value="">— Selecciona una materia —</option>
+        </select>
+        <div class="sim-resultado" id="calc-resultado">
+          <div class="sim-resultado-valor" id="calc-valor">—</div>
+          <div class="sim-resultado-label" id="calc-label"></div>
+        </div>
+      </div>
+
+      <div class="sim-card">
+        <div class="sim-titulo">🎲 Simulador — ¿Qué pasa si saco X?</div>
+        <p style="color:var(--gray-500);font-size:0.85rem;margin-bottom:16px">
+          Simula una nota sin afectar tus datos reales.
+        </p>
+        <select class="sim-select" id="sim-materia" onchange="dashboard.cargarSimulador()">
+          <option value="">— Selecciona una materia —</option>
+        </select>
+        <div id="sim-controles"></div>
+        <div class="sim-resultado" id="sim-resultado">
+          <div class="sim-resultado-valor" id="sim-valor">—</div>
+          <div class="sim-resultado-label" id="sim-label"></div>
+        </div>
+      </div>
+
+    </section>
+
+  </div><!-- /main-content -->
+
+  <!-- ══════════ MODALES ══════════ -->
+
+  <!-- Modal perfil -->
+  <div class="modal-overlay" id="modal-perfil" onclick="cerrarModalSiOverlay(event,'modal-perfil')">
+    <div class="modal-card modal-perfil-card">
+      <div class="modal-header">
+        <h3>Mi Perfil</h3>
+        <button class="modal-close" onclick="dashboard.cerrarModalPerfil()">✕</button>
+      </div>
+      <div class="perfil-modal-body" id="perfil-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Modal semestre anterior -->
+  <div class="modal-overlay" id="modal-semestre-ant" onclick="cerrarModalSiOverlay(event,'modal-semestre-ant')">
+    <div class="modal-card modal-wide">
+      <div class="modal-header">
+        <h3 id="modal-sem-titulo">Semestre X</h3>
+        <button class="modal-close" onclick="dashboard.cerrarModalSemestreAnt()">✕</button>
+      </div>
+      <div class="modal-sem-body" id="modal-sem-body"></div>
+    </div>
+  </div>
+
+  <!-- Modal agregar / editar materia -->
+  <div class="modal-overlay" id="modal-materia" onclick="cerrarModalSiOverlay(event,'modal-materia')">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-materia-titulo">Agregar Materia</h3>
+        <button class="modal-close" onclick="dashboard.cerrarModalMateria()">✕</button>
+      </div>
+      <form id="form-materia" novalidate>
+        <div class="form-group">
+          <label>Nombre de la materia</label>
+          <input type="text" id="m-nombre" placeholder="Ej: Cálculo I">
+          <span class="error-msg" id="error-m-nombre"></span>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Créditos</label>
+            <input type="number" id="m-creditos" placeholder="3" min="1" max="10">
+            <span class="error-msg" id="error-m-creditos"></span>
+          </div>
+          <div class="form-group">
+            <label>Color</label>
+            <input type="color" id="m-color" value="#2563eb">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Escala de notas</label>
+            <select id="m-escala">
+              <option value="5.0">0.0 — 5.0</option>
+              <option value="10.0">0.0 — 10.0</option>
+              <option value="100">0 — 100</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Nota mínima para aprobar</label>
+            <input type="number" id="m-nota-minima" placeholder="3.0" step="0.1" min="0">
+            <span class="error-msg" id="error-m-nota-minima"></span>
+          </div>
+        </div>
+        <div class="form-group" id="grupo-total-notas">
+          <label>Total de actividades en el semestre</label>
+          <input type="number" id="m-total-notas" placeholder="5" min="1" max="50">
+          <span class="hint">Cuántas actividades/notas tiene esta materia en total</span>
+          <span class="error-msg" id="error-m-total-notas"></span>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-cancelar" onclick="dashboard.cerrarModalMateria()">Cancelar</button>
+          <button type="submit" class="btn-guardar" id="btn-guardar-materia">Agregar materia</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal agregar actividad -->
+  <div class="modal-overlay" id="modal-actividad" onclick="cerrarModalSiOverlay(event,'modal-actividad')">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Agregar Actividad</h3>
+        <button class="modal-close" onclick="dashboard.cerrarModalActividad()">✕</button>
+      </div>
+      <form id="form-actividad" novalidate>
+        <div class="form-group">
+          <label>Título de la actividad</label>
+          <input type="text" id="a-titulo" placeholder="Ej: Parcial 1">
+          <span class="error-msg" id="error-a-titulo"></span>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tipo</label>
+            <select id="a-tipo">
+              <option value="examen">Examen</option>
+              <option value="parcial">Parcial</option>
+              <option value="tarea">Tarea</option>
+              <option value="proyecto">Proyecto</option>
+              <option value="quiz">Quiz</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Porcentaje (%)</label>
+            <input type="number" id="a-porcentaje" placeholder="20" min="1" max="100">
+            <span class="error-msg" id="error-a-porcentaje"></span>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nota obtenida <span class="opcional">(opcional)</span></label>
+            <input type="number" id="a-nota" placeholder="4.5" step="0.01" min="0">
+          </div>
+          <div class="form-group">
+            <label>Fecha límite</label>
+            <input type="date" id="a-fecha">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Prioridad</label>
+          <select id="a-prioridad">
+            <option value="baja">🟢 Baja</option>
+            <option value="media" selected>🟡 Media</option>
+            <option value="alta">🔴 Alta</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Descripción <span class="opcional">(opcional)</span></label>
+          <textarea id="a-descripcion" placeholder="Temas a evaluar..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Recordatorio <span class="opcional">(opcional)</span></label>
+          <textarea id="a-recordatorio" placeholder="Qué repasar, qué llevar..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-cancelar" onclick="dashboard.cerrarModalActividad()">Cancelar</button>
+          <button type="submit" class="btn-guardar">Guardar actividad</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal confirmar cerrar semestre -->
+  <div class="modal-overlay" id="modal-cerrar-sem" onclick="cerrarModalSiOverlay(event,'modal-cerrar-sem')">
+    <div class="modal-card" style="max-width:440px">
+      <div class="modal-header">
+        <h3>🎓 Cerrar Semestre</h3>
+        <button class="modal-close" onclick="cerrarModal('modal-cerrar-sem')">✕</button>
+      </div>
+      <div style="padding:28px">
+        <div id="resumen-cierre"></div>
+        <p style="color:var(--gray-500);font-size:0.88rem;margin-top:16px;line-height:1.6">
+          Al cerrar el semestre pasarás al siguiente. Las materias perdidas
+          quedarán en el historial y podrás repetirlas en futuros semestres.
+        </p>
+        <div class="modal-actions" style="margin-top:24px;padding-top:16px;border-top:1px solid var(--dark-border)">
+          <button class="btn-cancelar" onclick="cerrarModal('modal-cerrar-sem')">Cancelar</button>
+          <button class="btn-guardar" onclick="dashboard.cerrarSemestre()"
+            style="background:linear-gradient(135deg,#16a34a,#22c55e)">
+            ✅ Confirmar y continuar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal agregar clase horario -->
+  <div class="modal-overlay" id="modal-horario" onclick="cerrarModalSiOverlay(event,'modal-horario')">
+    <div class="modal-card" style="max-width:480px">
+      <div class="modal-header">
+        <h3>Agregar clase al horario</h3>
+        <button class="modal-close" onclick="cerrarModal('modal-horario')">✕</button>
+      </div>
+      <div class="horario-modal-body">
+        <div class="form-group">
+          <label>Materia</label>
+          <select id="h-materia">
+            <option value="">— Selecciona —</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Día</label>
+            <select id="h-dia">
+              <option value="0">Lunes</option>
+              <option value="1">Martes</option>
+              <option value="2">Miércoles</option>
+              <option value="3">Jueves</option>
+              <option value="4">Viernes</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Hora inicio</label>
+            <select id="h-hora">
+              <option value="6">6:00 AM</option>
+              <option value="7">7:00 AM</option>
+              <option value="8" selected>8:00 AM</option>
+              <option value="9">9:00 AM</option>
+              <option value="10">10:00 AM</option>
+              <option value="11">11:00 AM</option>
+              <option value="12">12:00 PM</option>
+              <option value="13">1:00 PM</option>
+              <option value="14">2:00 PM</option>
+              <option value="15">3:00 PM</option>
+              <option value="16">4:00 PM</option>
+              <option value="17">5:00 PM</option>
+              <option value="18">6:00 PM</option>
+              <option value="19">7:00 PM</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Duración</label>
+            <select id="h-duracion">
+              <option value="1">1 hora</option>
+              <option value="2" selected>2 horas</option>
+              <option value="3">3 horas</option>
+              <option value="4">4 horas</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Salón / Aula <span class="opcional">(opcional)</span></label>
+            <input type="text" id="h-salon" placeholder="Ej: Bloque B-201">
+          </div>
+        </div>
+        <div class="modal-actions" style="padding-top:8px;border-top:1px solid var(--dark-border)">
+          <button class="btn-cancelar" onclick="cerrarModal('modal-horario')">Cancelar</button>
+          <button class="btn-guardar" onclick="dashboard.guardarClaseHorario()">Agregar clase</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/front/storage.js" defer></script>
+  <script src="/front/dashboard.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro</title>
+  <link rel="stylesheet" href="registro.css">
+</head>
+<body>
+
+  <div class="bg">
+    <span></span><span></span><span></span>
+    <span></span><span></span><span></span>
+  </div>
+
+  <main class="auth-wrapper">
+    <div class="auth-card">
+
+      <div class="auth-brand">
+        <div class="brand-icon">📚</div>
+        <h1>Crear cuenta</h1>
+        <p>Empieza a gestionar tu vida académica</p>
+      </div>
+
+      <form id="form-registro" novalidate>
+
+        <div class="form-group">
+          <label for="nombre">Nombre completo</label>
+          <input type="text" id="nombre" name="nombre" placeholder="Tu nombre completo" autocomplete="name">
+          <span class="error-msg" id="error-nombre"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Correo electrónico</label>
+          <input type="email" id="email" name="email" placeholder="tu@correo.com" autocomplete="email">
+          <span class="error-msg" id="error-email"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <div class="input-eye">
+            <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+            <button type="button" class="eye-btn" onclick="togglePass('password', this)">👁</button>
+          </div>
+          <div class="strength-bar"><div id="strength-fill"></div></div>
+          <span class="strength-label" id="strength-label"></span>
+          <span class="error-msg" id="error-password"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="confirm">Confirmar contraseña</label>
+          <div class="input-eye">
+            <input type="password" id="confirm" name="confirm" placeholder="Repite tu contraseña" autocomplete="new-password">
+            <button type="button" class="eye-btn" onclick="togglePass('confirm', this)">👁</button>
+          </div>
+          <span class="error-msg" id="error-confirm"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="fecha">Fecha de nacimiento</label>
+          <input type="date" id="fecha" name="fecha">
+          <span class="error-msg" id="error-fecha"></span>
+        </div>
+
+        <button type="submit" class="btn-primary" id="btn-registro">
+          <span class="btn-text">Crear cuenta</span>
+          <span class="btn-spinner" style="display:none">Creando...</span>
+        </button>
+
+      </form>
+
+      <p class="auth-switch">¿Ya tienes cuenta? <a href="login.html">Inicia sesión</a></p>
+
+    </div>
+  </main>
+
+  <script src="/front/storage.js" defer></script>
+  <script src="/front/registro.js" defer></script>
+</body>
+</html>
